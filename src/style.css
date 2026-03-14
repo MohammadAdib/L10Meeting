@@ -851,7 +851,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   flex: 1;
   margin-left: 220px;
   padding: 32px 40px 80px;
-  overflow-y: auto;
+  overflow-y: scroll;
 }
 .admin-empty-content {
   color: var(--text-muted);
@@ -895,14 +895,15 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 /* ── DEPARTMENT SPLIT LAYOUT ── */
 .dept-layout { display: flex; gap: 24px; }
 .dept-left { flex: 0 0 25%; min-width: 0; }
-.dept-right { flex: 1; min-width: 0; }
+.dept-right { flex: 1; min-width: 0; transition: opacity .3s ease, transform .3s ease; }
+.dept-right.dept-loading { opacity: 0; transform: translateY(8px); }
 .dept-right .data-table { min-width: 900px; }
 .dept-readonly-label {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .8px;
-  color: var(--text-muted);
+  color: var(--accent);
   margin-bottom: 12px;
   padding: 6px 12px;
   background: rgba(255,255,255,.04);

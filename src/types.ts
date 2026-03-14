@@ -21,3 +21,16 @@ export const SECTIONS: SectionConfig[] = [
 ];
 
 export const DEFAULT_MEASURABLES = ['', '', ''];
+
+/** Default row counts for tables */
+export const DEFAULT_ROWS = {
+  scorecard: 3,
+  okr: 7,
+  headlines: 3,
+  todoReview: 3,
+  issues: 3,
+  idsIssues: 3,
+  newTodos: 3,
+  cascading: 3,
+  rating: 3,
+} as const;

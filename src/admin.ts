@@ -5,6 +5,7 @@ import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tabl
 import { loadScorecardOkrData } from './storage';
 import * as fs from './fs-service';
 import { showSettingsMenu } from './settings';
+import { DEFAULT_ROWS } from './types';
 
 let _selectedDept: string | null = null;
 let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -120,6 +121,29 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
   }
 }
 
+function buildRatingHtml(avg: number): string {
+  if (avg <= 0) return '<span class="meeting-rating-val" style="color:var(--text-muted)">—</span>';
+  const fullStars = Math.round(avg);
+  return Array.from({ length: 10 }, (_, i) =>
+    `<span class="meeting-star${i < fullStars ? ' active' : ''}">\u2605</span>`
+  ).join('') + `<span class="meeting-rating-val">${avg.toFixed(1)}</span>`;
+}
+
+function buildMeetingItemsHtml(meetings: { id: string; date: string; avgRating: number }[]): string {
+  return meetings.map(m => {
+    let displayDate = m.date;
+    const dp = m.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dp) displayDate = `${parseInt(dp[2])}/${dp[3]}/${dp[1]}`;
+    return `
+      <div class="meeting-item" data-id="${m.id}">
+        <div class="meeting-item-date">${displayDate}</div>
+        <div class="meeting-item-rating" id="rating-${m.id}">${buildRatingHtml(m.avgRating)}</div>
+        <button class="meeting-item-delete btn btn-outline-dark btn-sm" data-id="${m.id}" title="Delete meeting">&times;</button>
+      </div>
+    `;
+  }).join('');
+}
+
 async function loadDepartmentContent(deptName: string): Promise<void> {
   const content = document.getElementById('adminContent');
   if (!content) return;
@@ -139,15 +163,6 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
     ]);
   } catch { /* empty */ }
 
-  // Load last meeting data for scorecard/OKR (read-only)
-  let lastMeetingData: Record<string, unknown> | null = null;
-  if (meetings.length > 0) {
-    lastMeetingData = await fs.getMeetingData(deptName, meetings[0].id);
-  }
-
-  const scorecardRows = (lastMeetingData?.scorecardFullTable as string[][] | undefined) || [];
-  const okrRows = (lastMeetingData?.okrFullTable as string[][] | undefined) || [];
-
   const peopleItems = people.map((p, i) => `
     <div class="people-item" data-index="${i}">
       <input class="people-input" value="${p.replace(/"/g, '&quot;')}" placeholder="Name">
@@ -155,29 +170,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
     </div>
   `).join('');
 
-  const meetingItems = meetings.map(m => {
-    // Format date as dd/mm/yyyy
-    let displayDate = m.date;
-    const dp = m.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (dp) displayDate = `${parseInt(dp[2])}/${dp[3]}/${dp[1]}`;
-
-    // Star rating display
-    const avg = m.avgRating || 0;
-    const fullStars = Math.round(avg);
-    const starsHtml = avg > 0
-      ? Array.from({ length: 10 }, (_, i) =>
-          `<span class="meeting-star${i < fullStars ? ' active' : ''}">\u2605</span>`
-        ).join('') + `<span class="meeting-rating-val">${avg.toFixed(1)}</span>`
-      : '<span class="meeting-rating-val" style="color:var(--text-muted)">No ratings</span>';
-
-    return `
-      <div class="meeting-item" data-id="${m.id}">
-        <div class="meeting-item-date">${displayDate}</div>
-        <div class="meeting-item-rating">${starsHtml}</div>
-        <button class="meeting-item-delete btn btn-outline-dark btn-sm" data-id="${m.id}" title="Delete meeting">&times;</button>
-      </div>
-    `;
-  }).join('');
+  const meetingItems = buildMeetingItemsHtml(meetings);
 
   content.innerHTML = `
     <div class="dept-header">
@@ -215,7 +208,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
         </div>
       </div>
 
-      <div class="dept-right dept-readonly${meetings.length === 0 ? ' dept-no-meetings' : ''}">
+      <div class="dept-right dept-readonly${meetings.length === 0 ? ' dept-no-meetings' : ' dept-loading'}">
         <div class="dept-readonly-label">${meetings.length > 0 ? `Scorecard and OKRs from most recent meeting (${meetings[0].date})` : 'Scorecard and OKRs from most recent meeting — no meetings yet'}</div>
         ${buildScorecardContent()}
         ${buildOkrsContent()}
@@ -223,31 +216,70 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
     </div>
   `;
 
-  // Populate scorecard/OKR rows — use defaults or previous meeting count
-  const scCount = scorecardRows.length || 3;
-  for (let i = 0; i < scCount; i++) addScorecardFullRow();
-
-  const okCount = okrRows.length || 3;
-  for (let i = 1; i <= okCount; i++) addOkrFullRow('', i);
-  buildKeyResultBlocks();
-
-  // Load data from last meeting using shared loader
-  if (lastMeetingData) {
-    loadScorecardOkrData(lastMeetingData as Record<string, unknown>);
-  }
-
-  // Make dept-right read-only: disable all inputs/selects and hide add/delete buttons
-  const deptRight = document.querySelector('.dept-right');
-  if (deptRight) {
-    deptRight.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(el => {
-      el.disabled = true;
-    });
-    deptRight.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
-      el.style.display = 'none';
-    });
-  }
-
   wireContentEvents(deptName);
+
+  // ── Populate scorecard/OKR ──
+  if (meetings.length === 0) {
+    // No meetings — show default empty rows (read-only)
+    for (let i = 0; i < DEFAULT_ROWS.scorecard; i++) addScorecardFullRow();
+    for (let i = 1; i <= DEFAULT_ROWS.okr; i++) addOkrFullRow('', i);
+    buildKeyResultBlocks();
+    const dr = document.querySelector('.dept-right');
+    if (dr) {
+      dr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(el => {
+        el.disabled = true;
+      });
+      dr.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  } else {
+    fs.getMeetingData(deptName, meetings[0].id).then(lastMeetingData => {
+      if (_selectedDept !== deptName) return;
+
+      const scorecardRows = (lastMeetingData?.scorecardFullTable as string[][] | undefined) || [];
+      const okrRows = (lastMeetingData?.okrFullTable as string[][] | undefined) || [];
+
+      // Clear and rebuild with correct row counts
+      const scTb = document.querySelector('#scorecardFullTable tbody');
+      const okTb = document.querySelector('#okrFullTable tbody');
+      const krContainer = document.getElementById('okrKeyResultsContainer');
+      if (scTb) scTb.innerHTML = '';
+      if (okTb) okTb.innerHTML = '';
+      if (krContainer) krContainer.innerHTML = '';
+
+      const scCount = Math.max(scorecardRows.length, DEFAULT_ROWS.scorecard);
+      for (let i = 0; i < scCount; i++) addScorecardFullRow();
+      const okCount = Math.max(okrRows.length, DEFAULT_ROWS.okr);
+      for (let i = 1; i <= okCount; i++) addOkrFullRow('', i);
+      buildKeyResultBlocks();
+
+      if (lastMeetingData) {
+        loadScorecardOkrData(lastMeetingData as Record<string, unknown>);
+      }
+
+      // Apply read-only and reveal
+      const dr = document.querySelector<HTMLElement>('.dept-right');
+      if (dr) {
+        dr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(el => {
+          el.disabled = true;
+        });
+        dr.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
+          el.style.display = 'none';
+        });
+        dr.classList.remove('dept-loading');
+      }
+    });
+
+    // ── Background: load meeting ratings ──
+    fs.loadMeetingRatings(deptName).then(rated => {
+      if (_selectedDept !== deptName) return;
+      for (const m of rated) {
+        const el = document.getElementById(`rating-${m.id}`);
+        if (el) el.innerHTML = buildRatingHtml(m.avgRating);
+      }
+    });
+  }
 }
 
 function wireContentEvents(deptName: string): void {

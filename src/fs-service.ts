@@ -218,7 +218,8 @@ async function writeExcelData(dirHandle: FileSystemDirectoryHandle, fileName: st
 // ── Public API (replaces all fetch calls) ──
 
 export async function getDepartments(): Promise<{ name: string; peopleCount: number }[]> {
-  if (!_rootHandle) return [];
+  const ck = cacheKey('departments');
+  if (!_rootHandle) return cacheGet(ck) ?? [];
   try {
     const deps = await _rootHandle.getDirectoryHandle('Departments');
     const results: { name: string; peopleCount: number }[] = [];
@@ -228,10 +229,37 @@ export async function getDepartments(): Promise<{ name: string; peopleCount: num
       const peopleCount = content.trim() ? content.trim().split('\n').filter(Boolean).length : 0;
       results.push({ name: entry.name, peopleCount });
     }
+    cacheSet(ck, results);
     return results;
   } catch {
-    return [];
+    return cacheGet(ck) ?? [];
   }
+}
+
+// ── Cache layer ──
+// Stores results keyed by function+args. Write operations invalidate relevant keys.
+
+const _cache = new Map<string, { data: unknown; time: number }>();
+
+function cacheKey(...parts: string[]): string { return parts.join('::'); }
+
+function cacheGet<T>(key: string): T | undefined {
+  const entry = _cache.get(key);
+  return entry ? entry.data as T : undefined;
+}
+
+function cacheSet(key: string, data: unknown): void {
+  _cache.set(key, { data, time: Date.now() });
+}
+
+function cacheInvalidate(prefix: string): void {
+  for (const key of _cache.keys()) {
+    if (key.startsWith(prefix)) _cache.delete(key);
+  }
+}
+
+export function invalidateCache(): void {
+  _cache.clear();
 }
 
 export async function createDepartment(name: string): Promise<{ ok: boolean; error?: string }> {
@@ -246,6 +274,7 @@ export async function createDepartment(name: string): Promise<{ ok: boolean; err
     const dept = await deps.getDirectoryHandle(name, { create: true });
     await dept.getDirectoryHandle('meetings', { create: true });
     await writeTextFile(dept, 'people.txt', '');
+    cacheInvalidate('departments');
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err.message };
@@ -288,6 +317,9 @@ export async function renameDepartment(oldName: string, newName: string): Promis
 
     // Delete old department
     await deps.removeEntry(oldName, { recursive: true });
+    cacheInvalidate('departments');
+    cacheInvalidate(cacheKey('people', oldName));
+    cacheInvalidate(cacheKey('meetings', oldName));
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err.message };
@@ -299,6 +331,9 @@ export async function deleteDepartment(name: string): Promise<{ ok: boolean }> {
   try {
     const deps = await _rootHandle.getDirectoryHandle('Departments');
     await deps.removeEntry(name, { recursive: true });
+    cacheInvalidate('departments');
+    cacheInvalidate(cacheKey('people', name));
+    cacheInvalidate(cacheKey('meetings', name));
     return { ok: true };
   } catch {
     return { ok: false };
@@ -306,11 +341,14 @@ export async function deleteDepartment(name: string): Promise<{ ok: boolean }> {
 }
 
 export async function getPeople(deptName: string): Promise<string[]> {
-  if (!_rootHandle) return [];
+  const ck = cacheKey('people', deptName);
+  if (!_rootHandle) return cacheGet(ck) ?? [];
   try {
     const dept = await getDeptHandle(deptName);
     const content = await readTextFile(dept, 'people.txt');
-    return content.trim() ? content.trim().split('\n').map(s => s.trim()).filter(Boolean) : [];
+    const result = content.trim() ? content.trim().split('\n').map(s => s.trim()).filter(Boolean) : [];
+    cacheSet(ck, result);
+    return result;
   } catch {
     return [];
   }
@@ -321,11 +359,47 @@ export async function savePeople(deptName: string, people: string[]): Promise<vo
   try {
     const dept = await getDeptHandle(deptName, true);
     await writeTextFile(dept, 'people.txt', people.join('\n'));
+    cacheSet(cacheKey('people', deptName), [...people]);
+    cacheInvalidate('departments'); // people count changed
   } catch { /* silent */ }
 }
 
 export async function getMeetings(deptName: string): Promise<{ id: string; date: string; lastSaved: string; avgRating: number }[]> {
+  const ck = cacheKey('meetings', deptName);
+  const cached = cacheGet<{ id: string; date: string; lastSaved: string; avgRating: number }[]>(ck);
+  if (cached) return cached;
   if (!_rootHandle) return [];
+  try {
+    const meetings = await getMeetingsHandle(deptName);
+    const results: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
+
+    for await (const entry of (meetings as any).values()) {
+      if (entry.kind !== 'file' || !entry.name.endsWith('.xlsx') || entry.name.startsWith('~$')) continue;
+      const id = entry.name.replace('.xlsx', '');
+      const dateMatch = entry.name.match(/(\d{4}-\d{2}-\d{2}(-\d+)?)/);
+      const date = dateMatch ? dateMatch[1] : id;
+
+      let lastSaved = '';
+      try {
+        const file = await entry.getFile();
+        lastSaved = new Date(file.lastModified).toISOString();
+      } catch { /* skip */ }
+
+      results.push({ id, date, lastSaved, avgRating: 0 });
+    }
+
+    results.sort((a, b) => b.date.localeCompare(a.date));
+    cacheSet(ck, results);
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+/** Load ratings for meetings in background (expensive — parses each Excel file) */
+export async function loadMeetingRatings(deptName: string): Promise<{ id: string; date: string; lastSaved: string; avgRating: number }[]> {
+  const ck = cacheKey('meetings', deptName);
+  if (!_rootHandle) return cacheGet(ck) ?? [];
   try {
     const meetings = await getMeetingsHandle(deptName);
     const results: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
@@ -362,19 +436,23 @@ export async function getMeetings(deptName: string): Promise<{ id: string; date:
     }
 
     results.sort((a, b) => b.date.localeCompare(a.date));
+    cacheSet(ck, results);
     return results;
   } catch {
-    return [];
+    return cacheGet(ck) ?? [];
   }
 }
 
 export async function getMeetingData(deptName: string, meetingId: string): Promise<Record<string, any> | null> {
-  if (!_rootHandle) return null;
+  const ck = cacheKey('meetingData', deptName, meetingId);
+  if (!_rootHandle) return cacheGet(ck) ?? null;
   try {
     const meetings = await getMeetingsHandle(deptName);
-    return await readExcelData(meetings, `${meetingId}.xlsx`);
+    const result = await readExcelData(meetings, `${meetingId}.xlsx`);
+    cacheSet(ck, result);
+    return result;
   } catch {
-    return null;
+    return cacheGet(ck) ?? null;
   }
 }
 
@@ -402,6 +480,7 @@ export async function createMeeting(deptName: string, data: Record<string, any>)
     data.lastSaved = new Date().toISOString();
 
     await writeExcelData(meetings, fileName, data);
+    cacheInvalidate(cacheKey('meetings', deptName));
     return { id };
   } catch {
     return null;
@@ -414,6 +493,8 @@ export async function saveMeeting(deptName: string, meetingId: string, data: Rec
     const meetings = await getMeetingsHandle(deptName, true);
     data.lastSaved = new Date().toISOString();
     await writeExcelData(meetings, `${meetingId}.xlsx`, data);
+    cacheInvalidate(cacheKey('meetingData', deptName, meetingId));
+    cacheInvalidate(cacheKey('meetings', deptName));
     return true;
   } catch {
     return false;
@@ -425,6 +506,8 @@ export async function deleteMeeting(deptName: string, meetingId: string): Promis
   try {
     const meetings = await getMeetingsHandle(deptName);
     await meetings.removeEntry(`${meetingId}.xlsx`);
+    cacheInvalidate(cacheKey('meetings', deptName));
+    cacheInvalidate(cacheKey('meetingData', deptName, meetingId));
     return true;
   } catch {
     return false;
@@ -454,6 +537,7 @@ export async function importMeetingFile(deptName: string, fileData: ArrayBuffer)
     const writable = await fileHandle.createWritable();
     await writable.write(fileData);
     await writable.close();
+    cacheInvalidate(cacheKey('meetings', deptName));
     return { id };
   } catch {
     return null;

@@ -3,7 +3,7 @@ import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog } from './utils';
 import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
-import { DEFAULT_MEASURABLES } from './types';
+import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
@@ -195,13 +195,13 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── Populate default rows ──
   DEFAULT_MEASURABLES.forEach(m => addScorecardRow(m));
-  for (let i = 0; i < 3; i++) addOkrReviewRow();
-  for (let i = 0; i < 3; i++) addHeadlineRow();
-  for (let i = 0; i < 3; i++) addTodoReviewRow();
-  for (let i = 0; i < 3; i++) addIssueRow();
-  for (let i = 0; i < 3; i++) addIDSIssue();
-  for (let i = 0; i < 3; i++) addNewTodoRow();
-  for (let i = 0; i < 3; i++) addCascadingRow();
+  for (let i = 0; i < DEFAULT_ROWS.okr; i++) addOkrReviewRow();
+  for (let i = 0; i < DEFAULT_ROWS.headlines; i++) addHeadlineRow();
+  for (let i = 0; i < DEFAULT_ROWS.todoReview; i++) addTodoReviewRow();
+  for (let i = 0; i < DEFAULT_ROWS.issues; i++) addIssueRow();
+  for (let i = 0; i < DEFAULT_ROWS.idsIssues; i++) addIDSIssue();
+  for (let i = 0; i < DEFAULT_ROWS.newTodos; i++) addNewTodoRow();
+  for (let i = 0; i < DEFAULT_ROWS.cascading; i++) addCascadingRow();
 
   // ── Pre-fill rating table with department people ──
   if (people.length > 0) {
@@ -212,11 +212,11 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       if (i < selects.length) selects[i].value = name;
     });
   } else {
-    for (let i = 0; i < 3; i++) addRatingRow();
+    for (let i = 0; i < DEFAULT_ROWS.rating; i++) addRatingRow();
   }
 
   DEFAULT_MEASURABLES.forEach(m => addScorecardFullRow(m));
-  for (let i = 1; i <= 7; i++) addOkrFullRow('', i);
+  for (let i = 1; i <= DEFAULT_ROWS.okr; i++) addOkrFullRow('', i);
   buildKeyResultBlocks();
 
   // ── For new meetings, carry over scorecard & OKR data from most recent meeting ──

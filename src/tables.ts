@@ -170,7 +170,7 @@ export function addOkrFullRow(name = '', num?: number): void {
   if (!tb) return;
   const n = num ?? tb.children.length + 1;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="width:30px;text-align:center;color:var(--text-muted)">${n}</td><td><input value="${name}" placeholder="OKR description"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td style="width:30px;text-align:center;vertical-align:middle;color:var(--text-muted)">${n}</td><td><input value="${name}" placeholder="OKR description"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -179,7 +179,7 @@ export function addKeyResultRow(okrN: number, num?: number): void {
   if (!tb) return;
   const n = num ?? tb.children.length + 1;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="width:30px;text-align:center;color:var(--text-muted)">${n}</td><td><input placeholder="Key result"></td><td>${personSelect()}</td><td><input placeholder="Target"></td><td><input placeholder="Actual"></td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td style="width:30px;text-align:center;vertical-align:middle;color:var(--text-muted)">${n}</td><td><input placeholder="Key result"></td><td>${personSelect()}</td><td><input placeholder="Target"></td><td><input placeholder="Actual"></td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
