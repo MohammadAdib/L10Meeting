@@ -195,12 +195,12 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── Populate default rows ──
   DEFAULT_MEASURABLES.forEach(m => addScorecardRow(m));
-  for (let i = 0; i < 6; i++) addOkrReviewRow();
-  for (let i = 0; i < 5; i++) addHeadlineRow();
-  for (let i = 0; i < 7; i++) addTodoReviewRow();
-  for (let i = 0; i < 5; i++) addIssueRow();
+  for (let i = 0; i < 3; i++) addOkrReviewRow();
+  for (let i = 0; i < 3; i++) addHeadlineRow();
+  for (let i = 0; i < 3; i++) addTodoReviewRow();
+  for (let i = 0; i < 3; i++) addIssueRow();
   for (let i = 0; i < 3; i++) addIDSIssue();
-  for (let i = 0; i < 7; i++) addNewTodoRow();
+  for (let i = 0; i < 3; i++) addNewTodoRow();
   for (let i = 0; i < 3; i++) addCascadingRow();
 
   // ── Pre-fill rating table with department people ──
@@ -212,10 +212,10 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       if (i < selects.length) selects[i].value = name;
     });
   } else {
-    for (let i = 0; i < 5; i++) addRatingRow();
+    for (let i = 0; i < 3; i++) addRatingRow();
   }
 
-  DEFAULT_MEASURABLES.concat(['', '', '']).forEach(m => addScorecardFullRow(m));
+  DEFAULT_MEASURABLES.forEach(m => addScorecardFullRow(m));
   for (let i = 1; i <= 7; i++) addOkrFullRow('', i);
   buildKeyResultBlocks();
 

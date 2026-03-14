@@ -20,4 +20,4 @@ export const SECTIONS: SectionConfig[] = [
   { num: 7, name: 'Conclude', time: 300 },
 ];
 
-export const DEFAULT_MEASURABLES = ['', '', '', '', '', '', ''];
+export const DEFAULT_MEASURABLES = ['', '', ''];
