@@ -158,6 +158,9 @@ body {
   pointer-events: none;
   user-select: none;
 }
+.app-layout:has(#tab-meeting.blurred) {
+  overflow: hidden;
+}
 .sidebar.blurred .sidebar-item {
   filter: blur(6px);
   pointer-events: none;
