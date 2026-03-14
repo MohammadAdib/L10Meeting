@@ -4,6 +4,7 @@ import { buildScorecardContent, buildOkrsContent } from './html';
 import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
 import { loadScorecardOkrData } from './storage';
 import * as fs from './fs-service';
+import blankTemplateUrl from './blank.xlsx?url';
 import { showSettingsMenu } from './settings';
 import { DEFAULT_ROWS } from './types';
 
@@ -65,6 +66,16 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
         <div class="admin-sidebar-list">
           ${sidebarItems || '<div class="admin-sidebar-empty">No departments</div>'}
         </div>
+        <div class="admin-sidebar-footer">
+          <a class="admin-sidebar-link" id="btnDownloadTemplate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Template
+          </a>
+          <a class="admin-sidebar-link" href="#/about">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            About
+          </a>
+        </div>
       </nav>
       <div class="admin-content" id="adminContent">
         ${_selectedDept ? '' : '<div class="admin-empty-content">Create a department to get started.</div>'}
@@ -86,6 +97,18 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
   // Settings gear
   document.getElementById('btnSettings')?.addEventListener('click', (e) => {
     showSettingsMenu(e.currentTarget as HTMLElement);
+  });
+
+  // Template download
+  document.getElementById('btnDownloadTemplate')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const resp = await fetch(blankTemplateUrl);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'L10_Template.xlsx';
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
 
   // Wire sidebar clicks
@@ -400,4 +423,148 @@ function wireContentEvents(deptName: string): void {
 // Keep renderDepartmentView for the router -- it just calls renderAdminPortal with selection
 export async function renderDepartmentView(deptName: string): Promise<void> {
   await renderAdminPortal(deptName);
+}
+
+// ── About Page ──
+
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  {
+    q: 'What is a Level 10 Meeting?',
+    a: 'A Level 10 (L10) Meeting is a weekly leadership team meeting format from the Entrepreneurial Operating System (EOS). It follows a structured agenda designed to keep teams aligned, surface issues, and drive accountability. The name comes from the goal: every meeting should be rated a "10" by attendees.',
+  },
+  {
+    q: 'How long does an L10 meeting take?',
+    a: 'Exactly 90 minutes. The strict time-boxing is intentional — it forces prioritization and keeps discussions focused. Each section has a recommended time allocation that totals 90 minutes.',
+  },
+  {
+    q: 'What are the 7 sections of an L10 meeting?',
+    a: '<strong>1. Segue (5 min)</strong> — Share personal and professional good news.<br><strong>2. Scorecard Review (5 min)</strong> — Review weekly KPIs.<br><strong>3. OKR / Rock Review (5 min)</strong> — Report on/off track for quarterly goals.<br><strong>4. Headlines (5 min)</strong> — Customer and employee news.<br><strong>5. To-Do Review (5 min)</strong> — Check last week\'s commitments.<br><strong>6. IDS (60 min)</strong> — Identify, Discuss, Solve the top issues.<br><strong>7. Conclude (5 min)</strong> — Recap to-dos, cascading messages, and rate the meeting.',
+  },
+  {
+    q: 'What does IDS stand for?',
+    a: '<strong>Identify</strong> the real issue (not the symptom), <strong>Discuss</strong> it openly (ask "why?" until you find the root cause), and <strong>Solve</strong> it with a concrete action item. The key rule: solve one issue completely before moving to the next.',
+  },
+  {
+    q: 'What is a Scorecard?',
+    a: 'A scorecard tracks 5–15 weekly measurables (KPIs) that give your team a pulse on the business. Each measurable has an owner, a goal, and a weekly actual. If a number is off track, it drops into the Issues List for IDS.',
+  },
+  {
+    q: 'What are Rocks / OKRs?',
+    a: 'Rocks are the 3–7 most important priorities for the quarter (90 days). In this app they are tracked as OKRs (Objectives and Key Results). Each Rock has an owner and is reported as On Track or Off Track each week. Off-track Rocks go to IDS.',
+  },
+  {
+    q: 'Who should attend the L10?',
+    a: 'Your leadership team — typically 3–8 people. Everyone who has accountability for a departmental function should be in the room. Keep the group small enough for productive IDS conversations.',
+  },
+  {
+    q: 'What is the meeting rating for?',
+    a: 'At the end of each L10, every attendee rates the meeting from 1–10. The team discusses any rating below 8. Over time, this feedback loop improves meeting quality and highlights process issues.',
+  },
+  {
+    q: 'How does the Excel template work?',
+    a: 'The app uses a blank Excel template as the canonical format. Every meeting is saved as a .xlsx file with a fixed layout. You can download the template from the sidebar and open it in Excel independently. When you import an Excel file, it must follow the same layout.',
+  },
+  {
+    q: 'Where is my data stored?',
+    a: 'All data stays on your local machine in the folder you selected when you first launched the app. Nothing is sent to any server. For backup, point the app at a folder synced with OneDrive, Google Drive, or Dropbox.',
+  },
+];
+
+export function renderAboutPage(): void {
+  const app = document.getElementById('app')!;
+
+  const faqHtml = FAQ_ITEMS.map((item, i) => `
+    <div class="about-faq-item">
+      <button class="about-faq-q" data-faq="${i}">
+        <span>${item.q}</span>
+        <span class="about-faq-chevron">&#9662;</span>
+      </button>
+      <div class="about-faq-a" id="faq-a-${i}">${item.a}</div>
+    </div>
+  `).join('');
+
+  app.innerHTML = `
+    <div class="top-bar-wrapper">
+      <div class="top-bar">
+        <div class="top-bar-left">
+          ${getLogoUrl() ? `<img src="${getLogoUrl()}" class="top-bar-logo">` : `<span class="top-bar-logo-placeholder" style="cursor:default"></span>`}
+          <div class="top-bar-title">L10 Meeting Manager</div>
+        </div>
+        <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
+          <a class="btn btn-outline" href="#/" style="text-decoration:none">&larr; Back</a>
+        </div>
+      </div>
+    </div>
+    <div class="about-page">
+      <div class="about-container">
+
+        <div class="about-hero">
+          <h1>About L10 Meetings</h1>
+          <p>The Level 10 Meeting is the heartbeat of a team running on the Entrepreneurial Operating System (EOS). It turns meetings from time-wasters into the most productive 90 minutes of your week.</p>
+        </div>
+
+        <div class="about-section">
+          <h2>How It Works</h2>
+          <div class="about-steps">
+            <div class="about-step">
+              <div class="about-step-num">1</div>
+              <div>
+                <strong>Same day, same time, every week</strong>
+                <p>Consistency builds rhythm. The meeting starts and ends on time — no exceptions.</p>
+              </div>
+            </div>
+            <div class="about-step">
+              <div class="about-step-num">2</div>
+              <div>
+                <strong>Follow the agenda</strong>
+                <p>Seven sections, time-boxed. Segue, Scorecard, OKR Review, Headlines, To-Do Review, IDS, and Conclude.</p>
+              </div>
+            </div>
+            <div class="about-step">
+              <div class="about-step-num">3</div>
+              <div>
+                <strong>IDS is the engine</strong>
+                <p>60 of 90 minutes go to Identify, Discuss, Solve. Surface the real issue, find the root cause, and agree on a concrete next step.</p>
+              </div>
+            </div>
+            <div class="about-step">
+              <div class="about-step-num">4</div>
+              <div>
+                <strong>End with accountability</strong>
+                <p>Recap new to-dos, decide what to cascade to the organization, and rate the meeting 1–10.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-section">
+          <h2>Frequently Asked Questions</h2>
+          ${faqHtml}
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  // Logo click → home
+  document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
+    location.hash = '#/';
+  });
+
+  // FAQ accordion
+  document.querySelectorAll<HTMLButtonElement>('.about-faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = btn.dataset.faq!;
+      const answer = document.getElementById(`faq-a-${i}`)!;
+      const isOpen = answer.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.about-faq-a').forEach(a => a.classList.remove('open'));
+      document.querySelectorAll('.about-faq-chevron').forEach(c => c.classList.remove('open'));
+      // Toggle clicked
+      if (!isOpen) {
+        answer.classList.add('open');
+        btn.querySelector('.about-faq-chevron')!.classList.add('open');
+      }
+    });
+  });
 }

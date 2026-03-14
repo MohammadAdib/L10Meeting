@@ -4,13 +4,13 @@ import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
 import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
-import { renderAdminPortal, renderDepartmentView } from './admin';
+import { renderAdminPortal, renderDepartmentView, renderAboutPage } from './admin';
 import {
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, setRating, updateTodoCompletion, updateAvgRating,
   addScorecardFullRow, addOkrFullRow, addKeyResultRow, buildKeyResultBlocks,
-  resetIdsIssueCount, setPeople, suppressCapToast,
+  resetIdsIssueCount, setPeople, showCapToast,
 } from './tables';
 import * as fs from './fs-service';
 import { getLogoUrl, initLogo, handleLogoClick } from './logo';
@@ -30,8 +30,16 @@ window.__onStatusChange = onStatusChange;
 window.__updateTodoCompletion = updateTodoCompletion;
 window.__updateAvgRating = updateAvgRating;
 window.__setRating = setRating;
-window.__addIDSTodoRow = addIDSTodoRow;
-window.__addKeyResultRow = addKeyResultRow;
+window.__addIDSTodoRow = (n: number) => {
+  const before = document.querySelectorAll(`#idsTodo-${n} tbody tr`).length;
+  addIDSTodoRow(n);
+  if (document.querySelectorAll(`#idsTodo-${n} tbody tr`).length === before) showCapToast();
+};
+window.__addKeyResultRow = (n: number) => {
+  const before = document.querySelectorAll(`#keyResults-${n} tbody tr`).length;
+  addKeyResultRow(n);
+  if (document.querySelectorAll(`#keyResults-${n} tbody tr`).length === before) showCapToast();
+};
 
 // ── Router ──
 let _previousHash = '';
@@ -57,7 +65,9 @@ async function route() {
   const meetingMatch = hash.match(/#\/dept\/([^/]+)\/meeting\/(.+)/);
   const deptMatch = hash.match(/#\/dept\/([^/]+)$/);
 
-  if (meetingMatch) {
+  if (hash === '#/about') {
+    renderAboutPage();
+  } else if (meetingMatch) {
     const deptName = decodeURIComponent(meetingMatch[1]);
     const meetingId = decodeURIComponent(meetingMatch[2]);
     await initMeetingView(deptName, meetingId);
@@ -218,7 +228,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── For new meetings, carry over scorecard & OKR data from most recent meeting ──
   if (meetingId === 'new') {
-    suppressCapToast(true);
     try {
       const meetings = await fs.getMeetings(deptName);
       if (meetings.length > 0) {
@@ -258,7 +267,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
         }
       }
     } catch { /* silent */ }
-    suppressCapToast(false);
   }
 
   // ── If loading existing meeting, populate data ──
@@ -408,17 +416,22 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   });
 
   // Add row buttons
-  document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());
-  document.getElementById('btnAddOkrReview')?.addEventListener('click', () => addOkrReviewRow());
-  document.getElementById('btnAddHeadline')?.addEventListener('click', () => addHeadlineRow());
-  document.getElementById('btnAddTodoReview')?.addEventListener('click', () => addTodoReviewRow());
-  document.getElementById('btnAddIssue')?.addEventListener('click', () => addIssueRow());
-  document.getElementById('btnAddIDSIssue')?.addEventListener('click', () => addIDSIssue());
-  document.getElementById('btnAddNewTodo')?.addEventListener('click', () => addNewTodoRow());
-  document.getElementById('btnAddCascading')?.addEventListener('click', () => addCascadingRow());
-  document.getElementById('btnAddRating')?.addEventListener('click', () => addRatingRow());
-  document.getElementById('btnAddScorecardFull')?.addEventListener('click', () => addScorecardFullRow());
-  document.getElementById('btnAddOkrFull')?.addEventListener('click', () => addOkrFullRow());
+  function addOrToast(container: string, adder: () => void): void {
+    const before = document.querySelectorAll(container).length;
+    adder();
+    if (document.querySelectorAll(container).length === before) showCapToast();
+  }
+  document.getElementById('btnAddScorecard')?.addEventListener('click', () => addOrToast('#scorecardTable tbody tr', addScorecardRow));
+  document.getElementById('btnAddOkrReview')?.addEventListener('click', () => addOrToast('#okrReviewTable tbody tr', addOkrReviewRow));
+  document.getElementById('btnAddHeadline')?.addEventListener('click', () => addOrToast('#headlinesTable tbody tr', addHeadlineRow));
+  document.getElementById('btnAddTodoReview')?.addEventListener('click', () => addOrToast('#todoReviewTable tbody tr', addTodoReviewRow));
+  document.getElementById('btnAddIssue')?.addEventListener('click', () => addOrToast('#issuesListTable tbody tr', addIssueRow));
+  document.getElementById('btnAddIDSIssue')?.addEventListener('click', () => addOrToast('#idsIssuesContainer .ids-issue', addIDSIssue));
+  document.getElementById('btnAddNewTodo')?.addEventListener('click', () => addOrToast('#newTodoTable tbody tr', addNewTodoRow));
+  document.getElementById('btnAddCascading')?.addEventListener('click', () => addOrToast('#cascadingTable tbody tr', addCascadingRow));
+  document.getElementById('btnAddRating')?.addEventListener('click', () => addOrToast('#ratingTable tbody tr', addRatingRow));
+  document.getElementById('btnAddScorecardFull')?.addEventListener('click', () => addOrToast('#scorecardFullTable tbody tr', addScorecardFullRow));
+  document.getElementById('btnAddOkrFull')?.addEventListener('click', () => addOrToast('#okrFullTable tbody tr', addOkrFullRow));
 }
 
 // ── Folder picker landing page ──

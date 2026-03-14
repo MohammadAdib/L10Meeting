@@ -4,22 +4,14 @@ import { MAX_ROWS } from './types';
 let idsIssueCount = 0;
 let _people: string[] = [];
 
-let _suppressCapToast = false;
-
-export function suppressCapToast(suppress: boolean): void {
-  _suppressCapToast = suppress;
-}
-
 function atCap(tb: Element | null, max: number): tb is null {
   if (!tb) return true;
-  if (tb.children.length >= max) {
-    if (!_suppressCapToast) {
-      const t = document.querySelector('.toast');
-      if (t) { t.textContent = 'Max limit reached'; t.classList.add('show', 'toast-error'); setTimeout(() => t.classList.remove('show', 'toast-error'), 2500); }
-    }
-    return true;
-  }
-  return false;
+  return tb.children.length >= max;
+}
+
+export function showCapToast(): void {
+  const t = document.querySelector('.toast');
+  if (t) { t.textContent = 'Max limit reached'; t.classList.add('show', 'toast-error'); setTimeout(() => t.classList.remove('show', 'toast-error'), 2500); }
 }
 
 export function resetIdsIssueCount(): void {
@@ -97,14 +89,7 @@ export function addIssueRow(): void {
 
 export function addIDSIssue(): void {
   const container = document.getElementById('idsIssuesContainer');
-  if (!container) return;
-  if (container.children.length >= MAX_ROWS.idsBlocks) {
-    if (!_suppressCapToast) {
-      const t = document.querySelector('.toast');
-      if (t) { t.textContent = 'Max limit reached'; t.classList.add('show', 'toast-error'); setTimeout(() => t.classList.remove('show', 'toast-error'), 2500); }
-    }
-    return;
-  }
+  if (!container || container.children.length >= MAX_ROWS.idsBlocks) return;
   idsIssueCount++;
   const n = idsIssueCount;
   const div = document.createElement('div');
