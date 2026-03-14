@@ -6,30 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:server": "tsc -p tsconfig.server.json && (if exist server-dist\\index.cjs del server-dist\\index.cjs) && ren server-dist\\index.js index.cjs",
-    "start": "set BUILD_TARGET=desktop&& npm run build && npm run build:server && node server-dist/index.cjs",
-    "preview": "vite preview",
-    "build:desktop": "set BUILD_TARGET=desktop&& vite build && tsc -p tsconfig.server.json && (if exist server-dist\\index.cjs del server-dist\\index.cjs) && ren server-dist\\index.js index.cjs",
-    "package": "npm run build:desktop && pkg server-dist/index.cjs --targets node18-win-x64 --output release/L10Meeting.exe --config package.json"
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.0.0",
-    "@yao-pkg/pkg": "^6.0.0",
-    "png-to-ico": "^3.0.1",
-    "rcedit": "^5.0.2",
     "typescript": "~5.9.3",
     "vite": "^8.0.0"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
-    "express": "^4.21.0",
     "html2pdf.js": "^0.14.0"
-  },
-  "pkg": {
-    "assets": [
-      "dist/**/*",
-      "L10_Meeting_Template.xlsx"
-    ]
   }
 }
