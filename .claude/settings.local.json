@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && python -c \"\nimport openpyxl, sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\('L10_Meeting_Template.xlsx', data_only=True\\)\nfor sheet_name in wb.sheetnames:\n    ws = wb[sheet_name]\n    print\\(f'=== Sheet: {sheet_name} ==='\\)\n    for row in ws.iter_rows\\(min_row=1, max_row=ws.max_row, max_col=ws.max_column, values_only=False\\):\n        vals = []\n        for cell in row:\n            if cell.value is not None:\n                vals.append\\(f'{cell.coordinate}: {repr\\(cell.value\\)}'\\)\n        if vals:\n            print\\('  '.join\\(vals\\)\\)\n    print\\(\\)\n\")",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && gh auth login --web 2>&1 | head -5)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && python -c \"\nimport openpyxl, sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\('L10_Meeting_Template.xlsx'\\)\nws = wb['L10 Meeting']\ncolors = set\\(\\)\nfor row in ws.iter_rows\\(min_row=1, max_row=50, max_col=6\\):\n    for cell in row:\n        if cell.fill and cell.fill.fgColor and cell.fill.fgColor.rgb and cell.fill.fgColor.rgb != '00000000':\n            colors.add\\(f'{cell.coordinate}: fill={cell.fill.fgColor.rgb} val={cell.value}'\\)\n        if cell.font and cell.font.color and cell.font.color.rgb:\n            colors.add\\(f'{cell.coordinate}: font={cell.font.color.rgb} val={cell.value}'\\)\nfor c in sorted\\(colors\\):\n    print\\(c\\)\n\")",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm create vite@latest . -- --template vanilla-ts 2>&1 | tail -5)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && echo y | npm create vite@latest . -- --template vanilla-ts 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm create vite@latest l10app -- --template vanilla-ts 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && cp -r l10app/* . && cp l10app/.gitignore . 2>/dev/null; cp l10app/tsconfig.json . 2>/dev/null; rm -rf l10app)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install 2>&1 | tail -3)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install html2pdf.js 2>&1 | tail -3)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run build 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run dev 2>&1 | head -15)",
+      "Bash(sleep 3 && curl -s http://localhost:5173/ 2>/dev/null | head -20)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install exceljs 2>&1 | tail -3)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && python -c \"\nimport openpyxl, sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\('L10_Meeting_Template.xlsx', data_only=True\\)\nws = wb['L10 Meeting']\nfor row in ws.iter_rows\\(min_row=76, max_row=200, max_col=6, values_only=False\\):\n    for cell in row:\n        if cell.value is not None:\n            print\\(f'{cell.coordinate}: {repr\\(cell.value\\)}'\\)\n\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npm install 2>&1 | tail -5)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npm run build:desktop 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx @yao-pkg/pkg server-dist/index.js --targets node18-win-x64 --output release/L10Meeting.exe --config package.json 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npm install --save-dev png-to-ico 2>&1 | tail -3)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const pti = require\\('png-to-ico'\\); const fs = require\\('fs'\\); pti\\('src/logo.png'\\).then\\(buf => fs.writeFileSync\\('src/logo.ico', buf\\)\\).then\\(\\(\\) => console.log\\('done'\\)\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const pti = require\\('png-to-ico'\\); console.log\\(typeof pti, Object.keys\\(pti\\)\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const {default: pti} = require\\('png-to-ico'\\); const fs = require\\('fs'\\); pti\\('src/logo.png'\\).then\\(buf => { fs.writeFileSync\\('src/logo.ico', buf\\); console.log\\('done'\\); }\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const fs = require\\('fs'\\); const buf = fs.readFileSync\\('src/logo.png'\\); const w = buf.readUInt32BE\\(16\\); const h = buf.readUInt32BE\\(20\\); console.log\\(w+'x'+h\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npm run package 2>&1)",
+      "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; rm -f C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/release/L10Meeting.exe && echo \"removed\")",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx @yao-pkg/pkg server-dist/index.js --targets node18-win-x64 --icon src/icon.ico --output release/L10Meeting.exe --config package.json 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npm install --save-dev rcedit 2>&1 | tail -3)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const rcedit = require\\('rcedit'\\); console.log\\(Object.keys\\(rcedit\\)\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const {rcedit} = require\\('rcedit'\\); rcedit\\('release/L10Meeting.exe', {'set-gui-app': true}\\).then\\(\\(\\) => console.log\\('done'\\)\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const{rcedit}=require\\('rcedit'\\);rcedit\\('release/L10Meeting.exe',{'icon':'src/icon.ico'}\\).then\\(\\(\\)=>console.log\\('icon set'\\)\\)\" 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node -e \"const{rcedit}=require\\('rcedit'\\);rcedit\\('release/L10Meeting.exe',{'set-gui-app':false}\\).then\\(\\(\\)=>console.log\\('console mode restored'\\)\\)\" 2>&1)",
+      "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; rm -f C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/release/L10Meeting.exe)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node server-dist/index.js 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && tsc -p tsconfig.server.json && mv server-dist/index.js server-dist/index.cjs && node server-dist/index.cjs 2>&1)",
+      "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; rm -f C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/release/L10Meeting.exe C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/server-dist/index.cjs 2>/dev/null; echo \"cleaned\")"
+    ]
+  }
+}
