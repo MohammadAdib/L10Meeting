@@ -12,17 +12,16 @@ Features:
 
 ## Running Locally
 
-```bash
+```
 npm install
-npm run build
-node server-dist/index.cjs
+npm run start
 ```
 
-This builds the frontend, compiles the server, and starts it at `http://localhost:3847`.
+This builds the frontend and server, then starts it at `http://localhost:3847`.
 
 For development with hot reload (frontend only — needs the server running separately):
 
-```bash
+```
 npm run dev
 ```
 
