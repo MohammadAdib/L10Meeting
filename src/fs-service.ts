@@ -1,15 +1,4 @@
 import ExcelJS from 'exceljs';
-import blankTemplateUrl from './blank.xlsx?url';
-
-// Cached blank template buffer — loaded once from bundled asset
-let _blankTemplateBuffer: ArrayBuffer | null = null;
-
-async function getBlankTemplate(): Promise<ArrayBuffer> {
-  if (_blankTemplateBuffer) return _blankTemplateBuffer;
-  const resp = await fetch(blankTemplateUrl);
-  _blankTemplateBuffer = await resp.arrayBuffer();
-  return _blankTemplateBuffer;
-}
 
 // Extend FileSystemDirectoryHandle with Chrome-specific permission methods
 declare global {
@@ -202,27 +191,13 @@ async function readExcelData(dirHandle: FileSystemDirectoryHandle, fileName: str
 async function writeExcelData(dirHandle: FileSystemDirectoryHandle, fileName: string, data: Record<string, any>): Promise<void> {
   const wb = new ExcelJS.Workbook();
 
-  // Try to read existing file as base; fall back to blank.xlsx template
-  let loaded = false;
-  try {
-    const fileHandle = await dirHandle.getFileHandle(fileName);
-    const file = await fileHandle.getFile();
-    const buffer = await file.arrayBuffer();
-    await wb.xlsx.load(buffer);
-    loaded = true;
-  } catch { /* file doesn't exist yet */ }
+  // Build all sheets from scratch — dynamic row counts, clean formatting
+  buildL10Sheet(wb, data);
+  buildScorecardSheet(wb, data);
+  buildOkrsSheet(wb, data);
 
-  if (!loaded) {
-    // Use blank.xlsx as the base template — preserves all formatting, formulas, merged cells
-    const templateBuffer = await getBlankTemplate();
-    await wb.xlsx.load(templateBuffer);
-  }
-
-  const ws = wb.getWorksheet('L10 Meeting');
-  if (ws) writeJsonToWorkbook(wb, ws, data);
-
-  let dataWs = wb.getWorksheet('_data');
-  if (!dataWs) dataWs = wb.addWorksheet('_data');
+  // Lossless JSON storage (preferred on read)
+  const dataWs = wb.addWorksheet('_data');
   dataWs.getCell('A1').value = JSON.stringify(data);
 
   const buffer = await wb.xlsx.writeBuffer();
@@ -562,7 +537,7 @@ export async function importMeetingFile(deptName: string, fileData: ArrayBuffer)
 }
 
 
-// ── Excel helpers (ported from server/index.ts) ──
+// ── Excel helpers ──
 
 function stripEmoji(s: string): string {
   return s.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2300}-\u{23FF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F900}-\u{1F9FF}]|[\u{200D}]|[\u{20E3}]|[\u{E0020}-\u{E007F}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|[\u{2705}]|[\u{274C}]/gu, '').trim();
@@ -588,291 +563,479 @@ function formatDateCell(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function readWorkbookToJson(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet): Record<string, any> {
-  const c = (ref: string) => cellStr(ws, ref);
-  const data: Record<string, any> = {
-    meta: {
-      team: c('B2'), date: c('E2'), facilitator: c('B3'),
-      scribe: c('E3'), start: c('B4'), end: c('E4'),
-    },
-    segue: { personal: c('B8'), professional: c('B9') },
-  };
+// ── Styling constants ──
 
-  // Read scorecard/OKR review from L10 Meeting sheet
-  data.scorecardTable = readTable(ws, 14, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
-  data.okrReviewTable = readTable(ws, 26, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+const BORDER_THIN = { style: 'thin' as const, color: { argb: 'FFBDC3C7' } };
+const BORDERS = { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN };
+const SECTION_BG = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FF2C3E50' } };
+const SECTION_FONT = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
+const HEADER_BG = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFECF0F1' } };
+const HEADER_FONT = { bold: true, size: 10 };
+const LABEL_FONT = { bold: true, size: 10 };
+const SUB_FONT = { bold: true, size: 11, color: { argb: 'FF2C3E50' } };
 
-  // Read full Scorecard from separate sheet if it exists
-  const scSheet = wb.getWorksheet('Scorecard');
-  if (scSheet) {
-    const scC = (ref: string) => cellStr(scSheet, ref);
-    // Scorecard data: rows 4-13, cols A (name), B (owner), C-O (wk1-wk13) — but our table is A=name, B=owner, C=goal, D-P=weeks
-    // Template: Row 3 is header, data at 4-13, cols A=name, B=owner, C..M = wk1-wk13 (no Goal column)
-    const scRows: string[][] = [];
-    for (let r = 4; r <= 13; r++) {
-      const name = scC(`A${r}`);
-      const owner = scC(`B${r}`);
-      if (!name || name.startsWith('Measurable')) continue;
-      const row = [name, owner, '']; // name, owner, goal (no goal in template)
-      for (let w = 0; w < 13; w++) {
-        row.push(scC(`${String.fromCharCode(67 + w)}${r}`)); // C through O
-      }
-      scRows.push(row);
-    }
-    if (scRows.length > 0) data.scorecardFullTable = scRows;
+// ── Write helpers ──
 
-    // Also populate scorecardTable from scorecard sheet names/owners if L10 Meeting had formula refs
-    if (data.scorecardTable.length === 0 || data.scorecardTable.every((r: string[]) => !r[0] || r[0] === '[object Object]')) {
-      data.scorecardTable = scRows.map((r: string[]) => [r[0], r[1], '', '', '', '']); // name, owner, goal, actual, status, notes
-    }
-  }
-
-  // Read full OKRs from separate sheet if it exists
-  const okrSheet = wb.getWorksheet('OKRs');
-  if (okrSheet) {
-    const okC = (ref: string) => cellStr(okrSheet, ref);
-    // OKR data: rows 5-14, cols A=#, B=desc, C=owner, D=due, E=priority, F=%done, G=status, H=notes
-    // The # column is static in the UI, so exclude it from stored data
-    const okrRows: string[][] = [];
-    for (let r = 5; r <= 14; r++) {
-      const desc = okC(`B${r}`);
-      if (!desc) continue;
-      okrRows.push([desc, okC(`C${r}`), okC(`D${r}`), okC(`E${r}`), okC(`F${r}`), okC(`G${r}`), okC(`H${r}`)]);
-    }
-    if (okrRows.length > 0) data.okrFullTable = okrRows;
-
-    // Also populate okrReviewTable from OKRs sheet if L10 Meeting had formula refs
-    if (data.okrReviewTable.length === 0 || data.okrReviewTable.every((r: string[]) => !r[0] || r[0] === '[object Object]')) {
-      data.okrReviewTable = okrRows.map((r: string[]) => [r[0], r[1], r[2], r[5], r[4], r[6]]); // desc, owner, due, status, %done, notes
-    }
-
-    // Read key results blocks
-    const keyResults: string[][][] = [];
-    // OKR #1 key results at row 19, #2 at 25, #3 at 31
-    const krStarts = [19, 25, 31];
-    for (const start of krStarts) {
-      const krRows: string[][] = [];
-      for (let r = start; r <= start + 2; r++) {
-        const kr = okC(`B${r}`);
-        if (!kr) continue;
-        krRows.push([kr, okC(`C${r}`), okC(`D${r}`), okC(`E${r}`), okC(`F${r}`), okC(`G${r}`), okC(`H${r}`)]);
-      }
-      keyResults.push(krRows);
-    }
-    if (keyResults.some(kr => kr.length > 0)) data.keyResults = keyResults;
-  }
-  data.headlinesTable = readTable(ws, 37, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
-  data.todoReviewTable = readTable(ws, 47, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
-  data.issuesListTable = readTable(ws, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
-
-  // Dynamically find IDS issue blocks by scanning for "Issue:" in column A
-  const idsBlocks: any[] = [];
-  for (let r = 78; r <= 168; r++) {
-    const a = c(`A${r}`);
-    if (a === 'Issue:') {
-      const fields = [c(`B${r}`), c(`B${r + 1}`), c(`B${r + 2}`)];
-      const isPlaceholder = (s: string) => !s || s.startsWith('Describe the real') || s.startsWith("Ask 'why?'") || s.startsWith('Agreed solution');
-      if (isPlaceholder(fields[0]) && isPlaceholder(fields[1]) && isPlaceholder(fields[2])) continue;
-      // Todo header ("New To-Do(s)") is at r+3, data starts at r+4
-      const todos = readTable(ws, r + 4, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
-      idsBlocks.push({ fields, todos });
-    }
-  }
-  data.idsBlocks = idsBlocks;
-
-  // Conclude section — data rows (after header rows)
-  const newTodoStart = 172;
-  const cascadingStart = 185;
-  const ratingStart = 193;
-
-  data.newTodoTable = readTable(ws, newTodoStart, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
-  data.cascadingTable = readTable(ws, cascadingStart, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
-
-  const ratingTable: string[][] = [];
-  const ratingValues: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const r = ratingStart + i;
-    const name = c(`A${r}`);
-    const rating = c(`B${r}`);
-    const comment = c(`C${r}`);
-    if (!name || name.startsWith('Average')) break;
-    ratingTable.push([name, '', comment]);
-    ratingValues.push(rating || '0');
-  }
-  data.ratingTable = ratingTable;
-  data.ratingValues = ratingValues;
-
-  return data;
+function writeSectionRow(ws: ExcelJS.Worksheet, r: number, title: string, lastCol = 'F'): number {
+  ws.mergeCells(`A${r}:${lastCol}${r}`);
+  const cell = ws.getCell(`A${r}`);
+  cell.value = title;
+  cell.font = SECTION_FONT;
+  cell.fill = SECTION_BG;
+  cell.alignment = { vertical: 'middle' };
+  return r + 1;
 }
 
-function readTable(ws: ExcelJS.Worksheet, startRow: number, maxRows: number, cols: string[]): string[][] {
-  const rows: string[][] = [];
-  for (let i = 0; i < maxRows; i++) {
-    const r = startRow + i;
-    const row = cols.map(col => cellStr(ws, `${col}${r}`));
-    if (row.every(v => !v)) continue;
-    rows.push(row);
-  }
-  return rows;
+function writeSubHeader(ws: ExcelJS.Worksheet, r: number, title: string, lastCol = 'F'): number {
+  ws.mergeCells(`A${r}:${lastCol}${r}`);
+  const cell = ws.getCell(`A${r}`);
+  cell.value = title;
+  cell.font = SUB_FONT;
+  return r + 1;
 }
 
-function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: Record<string, any>): void {
-  const meta = data.meta || {};
-  ws.getCell('B2').value = meta.team || '';
-  ws.getCell('E2').value = meta.date || '';
-  ws.getCell('B3').value = meta.facilitator || '';
-  ws.getCell('E3').value = meta.scribe || '';
-  ws.getCell('B4').value = meta.start || '';
-  ws.getCell('E4').value = meta.end || '';
-
-  const segue = data.segue || {};
-  ws.getCell('B8').value = segue.personal || '';
-  ws.getCell('B9').value = segue.professional || '';
-
-  writeTable(ws, data.scorecardTable, 14, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.okrReviewTable, 26, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.headlinesTable, 37, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.todoReviewTable, 47, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
-
-  const todos = data.todoReviewTable || [];
-  let done = 0;
-  todos.forEach((r: string[]) => { if (r[3] === 'Done') done++; });
-  ws.getCell('E54').value = `${done} / ${todos.length} done`;
-
-  writeTable(ws, data.issuesListTable, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
-
-  // IDS block layout: header(base), Issue:(base+1), Root Cause:(base+2), Solution:(base+3), Todo header(base+4), todos(base+5..base+9)
-  const issueStarts = [78, 87, 96, 105, 114, 123, 132, 141, 150, 159];
-  const idsBlocks = data.idsBlocks || [];
-  idsBlocks.forEach((block: any, bi: number) => {
-    if (bi >= issueStarts.length) return;
-    const base = issueStarts[bi];
-    const fields = block.fields || [];
-    // base is the header row ("Issue #N"), fields go into Issue:/Root Cause:/Solution: rows
-    if (fields[0]) ws.getCell(`B${base + 1}`).value = fields[0];
-    if (fields[1]) ws.getCell(`B${base + 2}`).value = fields[1];
-    if (fields[2]) ws.getCell(`B${base + 3}`).value = fields[2];
-    // Todos start after the "New To-Do(s)" header row
-    writeTable(ws, block.todos, base + 5, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
+function writeHeaders(ws: ExcelJS.Worksheet, r: number, headers: string[], cols: string[]): number {
+  cols.forEach((col, i) => {
+    if (i >= headers.length) return;
+    const cell = ws.getCell(`${col}${r}`);
+    cell.value = headers[i];
+    cell.font = HEADER_FONT;
+    cell.fill = HEADER_BG;
+    cell.border = BORDERS;
   });
+  return r + 1;
+}
 
-  writeTable(ws, data.newTodoTable, 172, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.cascadingTable, 185, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+function writeRows(ws: ExcelJS.Worksheet, r: number, rows: string[][], cols: string[], validations?: Record<string, string[]>): number {
+  if (!rows) return r;
+  rows.forEach(row => {
+    cols.forEach((col, ci) => {
+      const cell = ws.getCell(`${col}${r}`);
+      cell.value = row[ci] || '';
+      cell.border = BORDERS;
+      if (validations?.[col]) {
+        cell.dataValidation = { type: 'list', allowBlank: true, formulae: [`"${validations[col].join(',')}"`] };
+      }
+    });
+    r++;
+  });
+  return r;
+}
 
+// ── Build sheets from data (dynamic row counts) ──
+
+function buildL10Sheet(wb: ExcelJS.Workbook, data: Record<string, any>): void {
+  const ws = wb.addWorksheet('L10 Meeting');
+  const C = ['A', 'B', 'C', 'D', 'E', 'F'];
+  [35, 20, 15, 15, 15, 25].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  let r = 1;
+
+  // Title
+  ws.mergeCells(`A${r}:F${r}`);
+  ws.getCell(`A${r}`).value = 'L10 Meeting';
+  ws.getCell(`A${r}`).font = { bold: true, size: 16 };
+  r += 2;
+
+  // Meta
+  const meta = data.meta || {};
+  ws.getCell(`A${r}`).value = 'Team:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = meta.team || '';
+  ws.getCell(`D${r}`).value = 'Date:'; ws.getCell(`D${r}`).font = LABEL_FONT;
+  ws.getCell(`E${r}`).value = meta.date || '';
+  r++;
+  ws.getCell(`A${r}`).value = 'Facilitator:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = meta.facilitator || '';
+  ws.getCell(`D${r}`).value = 'Scribe:'; ws.getCell(`D${r}`).font = LABEL_FONT;
+  ws.getCell(`E${r}`).value = meta.scribe || '';
+  r++;
+  ws.getCell(`A${r}`).value = 'Start Time:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = meta.start || '';
+  ws.getCell(`D${r}`).value = 'End Time:'; ws.getCell(`D${r}`).font = LABEL_FONT;
+  ws.getCell(`E${r}`).value = meta.end || '';
+  r += 2;
+
+  // 1. SEGUE
+  r = writeSectionRow(ws, r, '1. SEGUE');
+  ws.getCell(`A${r}`).value = 'Personal Good News:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = (data.segue || {}).personal || '';
+  r++;
+  ws.getCell(`A${r}`).value = 'Professional Good News:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = (data.segue || {}).professional || '';
+  r += 2;
+
+  // 2. SCORECARD REVIEW
+  r = writeSectionRow(ws, r, '2. SCORECARD REVIEW');
+  r = writeHeaders(ws, r, ['Measurable / KPI', 'Owner', 'Goal', 'Actual', 'Status', 'Notes'], C);
+  r = writeRows(ws, r, data.scorecardTable || [], C, { E: ['On Track', 'Off Track', 'At Risk'] });
+  r++;
+
+  // 3. OKR REVIEW
+  r = writeSectionRow(ws, r, '3. OKR REVIEW');
+  r = writeHeaders(ws, r, ['OKR / Rock Description', 'Owner', 'Due Date', 'Status', '% Done', 'Notes'], C);
+  r = writeRows(ws, r, data.okrReviewTable || [], C, { D: ['On Track', 'Off Track', 'At Risk'] });
+  r++;
+
+  // 4. CUSTOMER / EMPLOYEE HEADLINES
+  r = writeSectionRow(ws, r, '4. CUSTOMER / EMPLOYEE HEADLINES');
+  r = writeHeaders(ws, r, ['Headline', 'Type', 'Reported By', 'Action Needed?', 'Add to IDS?', 'Notes'], C);
+  r = writeRows(ws, r, data.headlinesTable || [], C, { B: ['Customer', 'Employee'], D: ['Yes', 'No'], E: ['Yes', 'No'] });
+  r++;
+
+  // 5. TO-DO LIST REVIEW
+  r = writeSectionRow(ws, r, '5. TO-DO LIST REVIEW');
+  r = writeHeaders(ws, r, ["Last Week's To-Do", 'Owner', 'Due Date', 'Status', 'Add to IDS?', 'Notes'], C);
+  const todos = data.todoReviewTable || [];
+  r = writeRows(ws, r, todos, C, { D: ['Open', 'Done', 'Carry Over'], E: ['Yes', 'No'] });
+  let done = 0;
+  todos.forEach((row: string[]) => { if (row[3] === 'Done') done++; });
+  ws.getCell(`A${r}`).value = 'Completion:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = `${done} / ${todos.length} done`;
+  r += 2;
+
+  // 6. IDS — IDENTIFY, DISCUSS, SOLVE
+  r = writeSectionRow(ws, r, '6. IDS \u2014 IDENTIFY, DISCUSS, SOLVE');
+  r = writeSubHeader(ws, r, 'Issues List');
+  r = writeHeaders(ws, r, ['Issue / Obstacle', 'Raised By', 'Priority', 'Status', 'Time Est.', 'Next Mtg?'], C);
+  r = writeRows(ws, r, data.issuesListTable || [], C, { C: ['High', 'Medium', 'Low'], D: ['Open', 'Solved', 'Next Meeting', 'Dropped'], F: ['Yes', 'No'] });
+  r++;
+
+  const idsBlocks = data.idsBlocks || [];
+  idsBlocks.forEach((block: any, i: number) => {
+    r = writeSubHeader(ws, r, `Issue #${i + 1}`);
+    ws.getCell(`A${r}`).value = 'Issue:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+    ws.getCell(`B${r}`).value = (block.fields || [])[0] || '';
+    r++;
+    ws.getCell(`A${r}`).value = 'Root Cause:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+    ws.getCell(`B${r}`).value = (block.fields || [])[1] || '';
+    r++;
+    ws.getCell(`A${r}`).value = 'Solution:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+    ws.getCell(`B${r}`).value = (block.fields || [])[2] || '';
+    r++;
+    r = writeSubHeader(ws, r, 'New To-Do(s)');
+    r = writeHeaders(ws, r, ['To-Do', 'Owner', 'Due Date', 'Priority', 'Status', 'Notes'], C);
+    r = writeRows(ws, r, block.todos || [], C, { D: ['High', 'Medium', 'Low'], E: ['Not Started', 'In Progress', 'Done'] });
+    r++;
+  });
+  r++;
+
+  // 7. CONCLUDE
+  r = writeSectionRow(ws, r, '7. CONCLUDE');
+
+  r = writeSubHeader(ws, r, "New To-Do List \u2014 This Week's Commitments");
+  r = writeHeaders(ws, r, ['To-Do', 'Owner', 'Due Date', 'Priority', 'Status', 'Notes'], C);
+  r = writeRows(ws, r, data.newTodoTable || [], C, { D: ['High', 'Medium', 'Low'], E: ['Not Started', 'In Progress', 'Done'] });
+  r++;
+
+  r = writeSubHeader(ws, r, 'Cascading Messages \u2014 What needs to be shared?');
+  r = writeHeaders(ws, r, ['Message', 'To Whom', 'By When', 'By Whom', 'Channel', 'Done?'], C);
+  r = writeRows(ws, r, data.cascadingTable || [], C, { F: ['Yes', 'No'] });
+  r++;
+
+  r = writeSubHeader(ws, r, 'Meeting Rating \u2014 Rate 1-10');
+  r = writeHeaders(ws, r, ['Team Member', 'Rating (1-10)', 'Quick Comment'], ['A', 'B', 'C']);
   const ratingTable = data.ratingTable || [];
   const ratingValues = data.ratingValues || [];
   let ratingSum = 0, ratingCount = 0;
   ratingTable.forEach((row: string[], i: number) => {
-    if (i > 9) return;
-    const r = 193 + i;
-    ws.getCell(`A${r}`).value = row[0] || '';
+    ws.getCell(`A${r}`).value = row[0] || '';    ws.getCell(`A${r}`).border = BORDERS;
     const rv = parseInt(ratingValues[i]) || 0;
-    ws.getCell(`B${r}`).value = rv > 0 ? rv : '';
-    ws.getCell(`C${r}`).value = row[2] || '';
+    ws.getCell(`B${r}`).value = rv > 0 ? rv : '';  ws.getCell(`B${r}`).border = BORDERS;
+    ws.getCell(`C${r}`).value = row[2] || '';       ws.getCell(`C${r}`).border = BORDERS;
     if (rv > 0) { ratingSum += rv; ratingCount++; }
+    r++;
   });
-  ws.getCell('A199').value = 'Average Rating:';
-  ws.getCell('B199').value = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : '';
+  ws.getCell(`A${r}`).value = 'Average Rating:'; ws.getCell(`A${r}`).font = LABEL_FONT;
+  ws.getCell(`B${r}`).value = ratingCount > 0 ? parseFloat((ratingSum / ratingCount).toFixed(1)) : '';
+}
 
-  const validations: { col: string; startRow: number; count: number; options: string[] }[] = [
-    { col: 'E', startRow: 14, count: 7, options: ['On Track', 'Off Track', 'At Risk'] },
-    { col: 'D', startRow: 26, count: 6, options: ['On Track', 'Off Track', 'At Risk'] },
-    { col: 'B', startRow: 37, count: 6, options: ['Customer', 'Employee'] },
-    { col: 'D', startRow: 37, count: 6, options: ['Yes', 'No'] },
-    { col: 'E', startRow: 37, count: 6, options: ['Yes', 'No'] },
-    { col: 'D', startRow: 47, count: 7, options: ['Open', 'Done', 'Carry Over'] },
-    { col: 'E', startRow: 47, count: 7, options: ['Yes', 'No'] },
-    { col: 'C', startRow: 60, count: 16, options: ['High', 'Medium', 'Low'] },
-    { col: 'D', startRow: 60, count: 16, options: ['Open', 'Solved', 'Next Meeting', 'Dropped'] },
-    { col: 'F', startRow: 60, count: 16, options: ['Yes', 'No'] },
-    { col: 'D', startRow: 172, count: 11, options: ['High', 'Medium', 'Low'] },
-    { col: 'E', startRow: 172, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
-    { col: 'F', startRow: 185, count: 6, options: ['Yes', 'No'] },
-  ];
-  for (const v of validations) {
-    for (let i = 0; i < v.count; i++) {
-      ws.getCell(`${v.col}${v.startRow + i}`).dataValidation = {
-        type: 'list', allowBlank: true,
-        formulae: [`"${v.options.join(',')}"`],
-      };
-    }
-  }
+function buildScorecardSheet(wb: ExcelJS.Workbook, data: Record<string, any>): void {
+  const rows = data.scorecardFullTable as string[][] | undefined;
+  if (!rows || rows.length === 0) return;
 
-  for (let bi = 0; bi < issueStarts.length; bi++) {
-    const base = issueStarts[bi];
-    for (let i = 0; i < 4; i++) {
-      ws.getCell(`D${base + 5 + i}`).dataValidation = {
-        type: 'list', allowBlank: true, formulae: ['"High,Medium,Low"'],
-      };
-      ws.getCell(`E${base + 5 + i}`).dataValidation = {
-        type: 'list', allowBlank: true, formulae: ['"Not Started,In Progress,Done"'],
-      };
-    }
-  }
+  const ws = wb.addWorksheet('Scorecard');
+  ws.getColumn(1).width = 30; ws.getColumn(2).width = 18; ws.getColumn(3).width = 10;
+  for (let i = 4; i <= 16; i++) ws.getColumn(i).width = 10;
+  const cols = 'ABCDEFGHIJKLMNOP'.split('');
 
-  // Write to Scorecard sheet
-  const scFullRows = data.scorecardFullTable as string[][] | undefined;
-  if (scFullRows) {
-    let scSheet = wb.getWorksheet('Scorecard');
-    if (!scSheet) scSheet = wb.addWorksheet('Scorecard');
-    scFullRows.forEach((row, i) => {
-      if (i >= 10) return;
-      const r = 4 + i;
-      scSheet!.getCell(`A${r}`).value = row[0] || ''; // name
-      scSheet!.getCell(`B${r}`).value = row[1] || ''; // owner
-      // row[2] is goal, skip (not in scorecard sheet)
-      // Weeks data starts at row[3]
-      for (let w = 0; w < 13; w++) {
-        scSheet!.getCell(`${String.fromCharCode(67 + w)}${r}`).value = row[3 + w] || '';
-      }
+  let r = 1;
+  ws.mergeCells('A1:P1');
+  ws.getCell('A1').value = 'Scorecard Tracker (Rolling 13 Weeks)';
+  ws.getCell('A1').font = { bold: true, size: 14 };
+  r = 3;
+
+  const headers = ['Measurable / KPI', 'Owner', 'Goal'];
+  for (let w = 1; w <= 13; w++) headers.push(`Wk ${w}`);
+  r = writeHeaders(ws, r, headers, cols);
+
+  rows.forEach(row => {
+    cols.forEach((col, ci) => {
+      const cell = ws.getCell(`${col}${r}`);
+      cell.value = row[ci] || '';
+      cell.border = BORDERS;
     });
-  }
+    r++;
+  });
+}
 
-  // Write to OKRs sheet
-  const okrFullRows = data.okrFullTable as string[][] | undefined;
-  if (okrFullRows) {
-    let okrSheet = wb.getWorksheet('OKRs');
-    if (!okrSheet) okrSheet = wb.addWorksheet('OKRs');
-    okrFullRows.forEach((row, i) => {
-      if (i >= 10) return;
-      const r = 5 + i;
-      // row = [desc, owner, due, priority, %done, status, notes] (no # column)
-      okrSheet!.getCell(`A${r}`).value = i + 1; // row number
-      okrSheet!.getCell(`B${r}`).value = row[0] || '';
-      okrSheet!.getCell(`C${r}`).value = row[1] || '';
-      okrSheet!.getCell(`D${r}`).value = row[2] || '';
-      okrSheet!.getCell(`E${r}`).value = row[3] || '';
-      okrSheet!.getCell(`F${r}`).value = row[4] || '';
-      okrSheet!.getCell(`G${r}`).value = row[5] || '';
-      okrSheet!.getCell(`H${r}`).value = row[6] || '';
-    });
+function buildOkrsSheet(wb: ExcelJS.Workbook, data: Record<string, any>): void {
+  const rows = data.okrFullTable as string[][] | undefined;
+  if (!rows || rows.length === 0) return;
 
-    // Write key results
-    const keyResults = data.keyResults as string[][][] | undefined;
-    if (keyResults) {
-      const krStarts = [19, 25, 31];
-      keyResults.forEach((krRows, ki) => {
-        if (ki >= krStarts.length) return;
-        krRows.forEach((row, ri) => {
-          if (ri >= 3) return;
-          const r = krStarts[ki] + ri;
-          okrSheet!.getCell(`A${r}`).value = ri + 1; // row number
-          for (let ci = 0; ci < 7 && ci < row.length; ci++) {
-            okrSheet!.getCell(`${String.fromCharCode(66 + ci)}${r}`).value = row[ci] || ''; // B onwards
-          }
-        });
+  const ws = wb.addWorksheet('OKRs');
+  [5, 35, 18, 12, 12, 10, 12, 25].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  const cols = 'ABCDEFGH'.split('');
+
+  let r = 1;
+  ws.mergeCells('A1:H1');
+  ws.getCell('A1').value = 'OKR Tracker (Rocks / 90-Day Priorities)';
+  ws.getCell('A1').font = { bold: true, size: 14 };
+  r = 3;
+
+  r = writeHeaders(ws, r, ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'Priority', '% Done', 'Status', 'Notes'], cols);
+  rows.forEach((row, i) => {
+    ws.getCell(`A${r}`).value = i + 1; ws.getCell(`A${r}`).border = BORDERS;
+    for (let ci = 0; ci < 7 && ci < row.length; ci++) {
+      const cell = ws.getCell(`${cols[ci + 1]}${r}`);
+      cell.value = row[ci] || '';
+      cell.border = BORDERS;
+    }
+    r++;
+  });
+
+  const keyResults = data.keyResults as string[][][] | undefined;
+  if (keyResults) {
+    r += 2;
+    keyResults.forEach((krRows, ki) => {
+      if (krRows.length === 0) return;
+      ws.mergeCells(`A${r}:H${r}`);
+      ws.getCell(`A${r}`).value = `Key Results for OKR #${ki + 1}`;
+      ws.getCell(`A${r}`).font = { bold: true, size: 11 };
+      r++;
+      r = writeHeaders(ws, r, ['#', 'Key Result', 'Owner', 'Due Date', 'Priority', '% Done', 'Status', 'Notes'], cols);
+      krRows.forEach((row, ri) => {
+        ws.getCell(`A${r}`).value = ri + 1; ws.getCell(`A${r}`).border = BORDERS;
+        for (let ci = 0; ci < 7 && ci < row.length; ci++) {
+          const cell = ws.getCell(`${cols[ci + 1]}${r}`);
+          cell.value = row[ci] || '';
+          cell.border = BORDERS;
+        }
+        r++;
       });
-    }
+      r++;
+    });
   }
 }
 
-function writeTable(ws: ExcelJS.Worksheet, rows: string[][] | undefined, startRow: number, maxRows: number, cols: string[]): void {
-  if (!rows) return;
-  rows.forEach((row, i) => {
-    if (i >= maxRows) return;
-    const r = startRow + i;
-    cols.forEach((col, ci) => {
-      ws.getCell(`${col}${r}`).value = row[ci] || '';
-    });
+// ── Read helpers (marker-based scanning for imported files) ──
+
+function readWorkbookToJson(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet): Record<string, any> {
+  const c = (ref: string) => cellStr(ws, ref);
+  const rowCount = ws.rowCount;
+  const C6 = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  // Scan all rows for section markers
+  const sec: Record<string, number> = {};
+  const idsBlockRows: number[] = [];
+
+  for (let r = 1; r <= rowCount; r++) {
+    const a = c(`A${r}`);
+    const au = a.toUpperCase();
+    if ((au.startsWith('TEAM:') || au === 'TEAM') && !sec.meta) sec.meta = r;
+    if (au.includes('SEGUE') && !sec.segue) sec.segue = r;
+    if (au.includes('SCORECARD REVIEW') && !sec.scorecard) sec.scorecard = r;
+    if (au.includes('OKR REVIEW') && !sec.okrReview) sec.okrReview = r;
+    if (au.includes('HEADLINE') && !sec.headlines) sec.headlines = r;
+    if ((au.includes('TO-DO LIST REVIEW') || au.includes('TODO LIST REVIEW')) && !sec.todoReview) sec.todoReview = r;
+    if (au.includes('IDS') && (au.includes('IDENTIFY') || au.includes('DISCUSS')) && !sec.ids) sec.ids = r;
+    if (a === 'Issue:') idsBlockRows.push(r);
+    if (au.includes('CONCLUDE') && !sec.conclude) sec.conclude = r;
+    if ((au.includes('NEW TO-DO LIST') || au.includes('COMMITMENTS')) && sec.conclude && !sec.newTodo) sec.newTodo = r;
+    if (au.includes('CASCADING') && !sec.cascading) sec.cascading = r;
+    if (au.includes('MEETING RATING') && !sec.rating) sec.rating = r;
+    if (au.includes('AVERAGE RATING') || au.includes('AVG RATING')) sec.avgRating = r;
+  }
+
+  // Ordered boundaries for finding section ends
+  const allBounds = Object.values(sec).concat(idsBlockRows.map(r => r - 1)).sort((a, b) => a - b);
+  const nextAfter = (row: number): number => {
+    for (const b of allBounds) { if (b > row + 1) return b; }
+    return rowCount + 1;
+  };
+
+  // Read non-empty rows between two row numbers
+  function readTable(start: number, end: number): string[][] {
+    const rows: string[][] = [];
+    for (let r = start; r < end; r++) {
+      const row = C6.map(col => c(`${col}${r}`));
+      if (row.every(v => !v)) continue;
+      // Skip rows that look like headers/labels
+      const a0 = row[0].toUpperCase();
+      if (a0.includes('COMPLETION:') || a0.includes('AVERAGE RATING')) continue;
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  const data: Record<string, any> = {};
+
+  // Meta
+  if (sec.meta) {
+    const mr = sec.meta;
+    data.meta = {
+      team: c(`B${mr}`), date: c(`E${mr}`),
+      facilitator: c(`B${mr + 1}`), scribe: c(`E${mr + 1}`),
+      start: c(`B${mr + 2}`), end: c(`E${mr + 2}`),
+    };
+  } else {
+    data.meta = {};
+  }
+
+  // Segue
+  if (sec.segue) {
+    let personal = '', professional = '';
+    const end = nextAfter(sec.segue);
+    for (let r = sec.segue + 1; r < Math.min(sec.segue + 5, end); r++) {
+      const au = c(`A${r}`).toUpperCase();
+      if (au.includes('PERSONAL')) personal = c(`B${r}`);
+      if (au.includes('PROFESSIONAL')) professional = c(`B${r}`);
+    }
+    data.segue = { personal, professional };
+  }
+
+  // Standard table sections: section header row + table header row = data starts at +2
+  if (sec.scorecard) data.scorecardTable = readTable(sec.scorecard + 2, nextAfter(sec.scorecard));
+  if (sec.okrReview) data.okrReviewTable = readTable(sec.okrReview + 2, nextAfter(sec.okrReview));
+  if (sec.headlines) data.headlinesTable = readTable(sec.headlines + 2, nextAfter(sec.headlines));
+  if (sec.todoReview) data.todoReviewTable = readTable(sec.todoReview + 2, nextAfter(sec.todoReview));
+
+  // Issues list: IDS section header + "Issues List" sub-header + table header = +3
+  if (sec.ids) {
+    const end = idsBlockRows.length > 0 ? idsBlockRows[0] - 1 : nextAfter(sec.ids);
+    data.issuesListTable = readTable(sec.ids + 3, end);
+  }
+
+  // IDS detail blocks
+  const idsBlocks: any[] = [];
+  idsBlockRows.forEach((blockRow, bi) => {
+    const fields = [c(`B${blockRow}`), c(`B${blockRow + 1}`), c(`B${blockRow + 2}`)];
+    const isPlaceholder = (s: string) => !s || s.startsWith('Describe the real') || s.startsWith("Ask 'why?'") || s.startsWith('Agreed solution');
+    if (isPlaceholder(fields[0]) && isPlaceholder(fields[1]) && isPlaceholder(fields[2])) return;
+    // After Issue/Root Cause/Solution: sub-header(+3), table header(+4), data(+5)
+    const todoStart = blockRow + 5;
+    const todoEnd = bi + 1 < idsBlockRows.length ? idsBlockRows[bi + 1] - 1 : (sec.conclude || nextAfter(blockRow));
+    const todos = readTable(todoStart, todoEnd);
+    idsBlocks.push({ fields, todos });
   });
+  data.idsBlocks = idsBlocks;
+
+  // Conclude sub-sections
+  if (sec.newTodo) {
+    const end = sec.cascading || sec.rating || nextAfter(sec.newTodo);
+    data.newTodoTable = readTable(sec.newTodo + 2, end);
+  } else if (sec.conclude) {
+    const end = sec.cascading || sec.rating || nextAfter(sec.conclude);
+    data.newTodoTable = readTable(sec.conclude + 3, end);
+  }
+
+  if (sec.cascading) {
+    const end = sec.rating || nextAfter(sec.cascading);
+    data.cascadingTable = readTable(sec.cascading + 2, end);
+  }
+
+  if (sec.rating) {
+    const end = sec.avgRating || nextAfter(sec.rating);
+    const ratingTable: string[][] = [];
+    const ratingValues: string[] = [];
+    for (let r = sec.rating + 2; r < end; r++) {
+      const name = c(`A${r}`);
+      if (!name || name.toUpperCase().includes('AVERAGE')) break;
+      ratingTable.push([name, '', c(`C${r}`)]);
+      ratingValues.push(c(`B${r}`) || '0');
+    }
+    data.ratingTable = ratingTable;
+    data.ratingValues = ratingValues;
+  }
+
+  // Read from Scorecard sheet
+  const scSheet = wb.getWorksheet('Scorecard');
+  if (scSheet) {
+    const scC = (ref: string) => cellStr(scSheet, ref);
+    let headerRow = 0;
+    for (let r = 1; r <= scSheet.rowCount; r++) {
+      if (scC(`A${r}`).toUpperCase().includes('MEASURABLE') || scC(`A${r}`).toUpperCase().includes('KPI')) { headerRow = r; break; }
+    }
+    if (headerRow) {
+      const hasGoal = scC(`C${headerRow}`).toUpperCase().includes('GOAL');
+      const scRows: string[][] = [];
+      for (let r = headerRow + 1; r <= scSheet.rowCount; r++) {
+        const name = scC(`A${r}`);
+        if (!name) continue;
+        if (hasGoal) {
+          const row = [name, scC(`B${r}`), scC(`C${r}`)];
+          for (let w = 0; w < 13; w++) row.push(scC(`${String.fromCharCode(68 + w)}${r}`)); // D-P
+          scRows.push(row);
+        } else {
+          const row = [name, scC(`B${r}`), ''];
+          for (let w = 0; w < 13; w++) row.push(scC(`${String.fromCharCode(67 + w)}${r}`)); // C-O
+          scRows.push(row);
+        }
+      }
+      if (scRows.length > 0) data.scorecardFullTable = scRows;
+      if (!data.scorecardTable || data.scorecardTable.length === 0 ||
+          data.scorecardTable.every((r: string[]) => !r[0] || r[0] === '[object Object]')) {
+        data.scorecardTable = scRows.map((r: string[]) => [r[0], r[1], '', '', '', '']);
+      }
+    }
+  }
+
+  // Read from OKRs sheet
+  const okrSheet = wb.getWorksheet('OKRs');
+  if (okrSheet) {
+    const okC = (ref: string) => cellStr(okrSheet, ref);
+    let headerRow = 0;
+    for (let r = 1; r <= okrSheet.rowCount; r++) {
+      const b = okC(`B${r}`).toUpperCase();
+      if (b.includes('OKR') || b.includes('DESCRIPTION') || b.includes('ROCK')) { headerRow = r; break; }
+    }
+    if (headerRow) {
+      const okrRows: string[][] = [];
+      for (let r = headerRow + 1; r <= okrSheet.rowCount; r++) {
+        const desc = okC(`B${r}`);
+        if (!desc) {
+          if (okC(`A${r}`).toUpperCase().includes('KEY RESULT')) break;
+          continue;
+        }
+        okrRows.push([desc, okC(`C${r}`), okC(`D${r}`), okC(`E${r}`), okC(`F${r}`), okC(`G${r}`), okC(`H${r}`)]);
+      }
+      if (okrRows.length > 0) data.okrFullTable = okrRows;
+      if (!data.okrReviewTable || data.okrReviewTable.length === 0 ||
+          data.okrReviewTable.every((r: string[]) => !r[0] || r[0] === '[object Object]')) {
+        data.okrReviewTable = okrRows.map((r: string[]) => [r[0], r[1], r[2], r[5], r[4], r[6]]);
+      }
+
+      // Key results
+      const keyResults: string[][][] = [];
+      let currentKR: string[][] = [];
+      let inKR = false;
+      for (let r = headerRow + okrRows.length + 1; r <= okrSheet.rowCount; r++) {
+        const au = okC(`A${r}`).toUpperCase();
+        if (au.includes('KEY RESULT')) {
+          if (inKR && currentKR.length > 0) keyResults.push(currentKR);
+          currentKR = [];
+          inKR = true;
+          r++; // skip table header row
+          continue;
+        }
+        if (inKR) {
+          const kr = okC(`B${r}`);
+          if (!kr) { if (currentKR.length > 0) { keyResults.push(currentKR); currentKR = []; inKR = false; } continue; }
+          currentKR.push([kr, okC(`C${r}`), okC(`D${r}`), okC(`E${r}`), okC(`F${r}`), okC(`G${r}`), okC(`H${r}`)]);
+        }
+      }
+      if (inKR && currentKR.length > 0) keyResults.push(currentKR);
+      if (keyResults.some(kr => kr.length > 0)) data.keyResults = keyResults;
+    }
+  }
+
+  return data;
 }

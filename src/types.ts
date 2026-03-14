@@ -34,3 +34,6 @@ export const DEFAULT_ROWS = {
   cascading: 3,
   rating: 3,
 } as const;
+
+/** Maximum rows allowed per table section */
+export const MAX_ROWS = 20;

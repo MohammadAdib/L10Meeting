@@ -69,7 +69,9 @@
       "Bash(find /c/Users/MohammadAdib/Documents/GitHub/CompanyTools -maxdepth 1 -type f -name \"*.md\" -o -name \"*.txt\" -o -name \".env*\" 2>/dev/null | head -20)",
       "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && rm -rf server/ server-dist/ && rm -f tsconfig.server.json src/template.xlsx)",
       "Bash(npm run:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(node -e \"\nconst ExcelJS = require\\('exceljs'\\);\nasync function main\\(\\) {\n  const wb = new ExcelJS.Workbook\\(\\);\n  await wb.xlsx.readFile\\('C:/Users/MohammadAdib/Downloads/Titan_L10_Meeting_12 Mar 26.xlsx'\\);\n  const ws = wb.getWorksheet\\('L10 Meeting'\\);\n  for \\(let r = 168; r <= 200; r++\\) {\n    const a = ws.getCell\\(r, 1\\).value;\n    if \\(a\\) console.log\\('Row ' + r + ' A: ' + String\\(a\\).substring\\(0, 80\\)\\);\n  }\n}\nmain\\(\\).catch\\(e => console.error\\(e\\)\\);\n\" 2>&1)",
+      "Bash(node -e \"\nconst ExcelJS = require\\('exceljs'\\);\nasync function main\\(\\) {\n  const wb = new ExcelJS.Workbook\\(\\);\n  await wb.xlsx.readFile\\('C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/src/blank.xlsx'\\);\n  console.log\\('Sheets:', wb.worksheets.map\\(s => s.name\\)\\);\n  \n  for \\(const sheet of wb.worksheets\\) {\n    console.log\\('\\\\n========== ' + sheet.name + ' =========='\\);\n    const lastRow = sheet.lastRow ? sheet.lastRow.number : 0;\n    for \\(let r = 1; r <= lastRow; r++\\) {\n      const vals = [];\n      for \\(let c = 1; c <= 16; c++\\) {\n        const cell = sheet.getCell\\(r, c\\);\n        const v = cell.value;\n        if \\(v === null || v === undefined\\) { vals.push\\(''\\); continue; }\n        if \\(typeof v === 'object' && 'formula' in v\\) {\n          vals.push\\('F:' + v.formula\\);\n        } else {\n          vals.push\\(String\\(v\\).substring\\(0, 60\\)\\);\n        }\n      }\n      if \\(vals.some\\(v => v\\)\\) console.log\\('R' + r + ': ' + JSON.stringify\\(vals\\)\\);\n    }\n  }\n}\nmain\\(\\).catch\\(e => console.error\\(e\\)\\);\n\" 2>&1)"
     ]
   }
 }

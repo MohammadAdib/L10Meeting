@@ -1,4 +1,5 @@
 import { statusSelect, deleteBtn } from './utils';
+import { MAX_ROWS } from './types';
 
 let idsIssueCount = 0;
 let _people: string[] = [];
@@ -24,9 +25,20 @@ function personSelectSingle(): string {
   return `<select class="person-select">${opts}</select>`;
 }
 
+function atCap(tb: Element | null): tb is null {
+  if (!tb) return true;
+  if (tb.children.length >= MAX_ROWS) { showCapToast(); return true; }
+  return false;
+}
+
+function showCapToast(): void {
+  const t = document.querySelector('.toast');
+  if (t) { t.textContent = `Row limit reached (max ${MAX_ROWS})`; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+}
+
 export function addScorecardRow(name = ''): void {
   const tb = document.querySelector('#scorecardTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input value="${name}" placeholder="KPI name"></td><td>${personSelect()}</td><td><input placeholder="Goal"></td><td><input placeholder="Actual"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -34,7 +46,7 @@ export function addScorecardRow(name = ''): void {
 
 export function addOkrReviewRow(name = ''): void {
   const tb = document.querySelector('#okrReviewTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input value="${name}" placeholder="OKR description"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:60px"></td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -42,7 +54,7 @@ export function addOkrReviewRow(name = ''): void {
 
 export function addHeadlineRow(): void {
   const tb = document.querySelector('#headlinesTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input placeholder="Headline"></td><td>${statusSelect(['', 'Customer', 'Employee'])}</td><td>${personSelect()}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -50,7 +62,7 @@ export function addHeadlineRow(): void {
 
 export function addTodoReviewRow(): void {
   const tb = document.querySelector('#todoReviewTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input placeholder="To-do item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -70,17 +82,18 @@ export function updateTodoCompletion(): void {
 
 export function addIssueRow(): void {
   const tb = document.querySelector('#issuesListTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input placeholder="Issue / obstacle"></td><td>${personSelect()}</td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Solved', 'Next Meeting', 'Dropped'])}</td><td><input placeholder="e.g. 10 min" style="width:70px"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
 export function addIDSIssue(): void {
-  idsIssueCount++;
-  const n = idsIssueCount;
   const container = document.getElementById('idsIssuesContainer');
   if (!container) return;
+  if (container.children.length >= MAX_ROWS) { showCapToast(); return; }
+  idsIssueCount++;
+  const n = idsIssueCount;
   const div = document.createElement('div');
   div.className = 'ids-issue';
   div.innerHTML = `
@@ -105,7 +118,7 @@ export function addIDSIssue(): void {
 
 export function addIDSTodoRow(issueN: number): void {
   const tb = document.querySelector(`#idsTodo-${issueN} tbody`);
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -113,7 +126,7 @@ export function addIDSTodoRow(issueN: number): void {
 
 export function addNewTodoRow(): void {
   const tb = document.querySelector('#newTodoTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -121,7 +134,7 @@ export function addNewTodoRow(): void {
 
 export function addCascadingRow(): void {
   const tb = document.querySelector('#cascadingTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td><input placeholder="Message"></td><td>${personSelect()}</td><td><input type="date"></td><td>${personSelect()}</td><td><input placeholder="e.g. Slack, Email"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
@@ -129,7 +142,7 @@ export function addCascadingRow(): void {
 
 export function addRatingRow(): void {
   const tb = document.querySelector('#ratingTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   const stars = Array.from({ length: 10 }, (_, i) =>
     `<button onclick="window.__setRating(this,${i + 1})">&#9733;</button>`
@@ -160,7 +173,7 @@ export function updateAvgRating(): void {
 // ── Scorecard Full Tab ──
 export function addScorecardFullRow(name = ''): void {
   const tb = document.querySelector('#scorecardFullTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const tr = document.createElement('tr');
   let weeks = '';
   for (let i = 0; i < 13; i++) weeks += `<td><input placeholder="-" style="width:50px;text-align:center"></td>`;
@@ -171,7 +184,7 @@ export function addScorecardFullRow(name = ''): void {
 // ── OKR Full Tab ──
 export function addOkrFullRow(name = '', num?: number): void {
   const tb = document.querySelector('#okrFullTable tbody');
-  if (!tb) return;
+  if (atCap(tb)) return;
   const n = num ?? tb.children.length + 1;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td style="width:30px;text-align:center;vertical-align:middle;color:var(--text-muted)">${n}</td><td><input value="${name}" placeholder="OKR description"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
@@ -180,7 +193,7 @@ export function addOkrFullRow(name = '', num?: number): void {
 
 export function addKeyResultRow(okrN: number, num?: number): void {
   const tb = document.querySelector(`#keyResults-${okrN} tbody`);
-  if (!tb) return;
+  if (atCap(tb)) return;
   const n = num ?? tb.children.length + 1;
   const tr = document.createElement('tr');
   tr.innerHTML = `<td style="width:30px;text-align:center;vertical-align:middle;color:var(--text-muted)">${n}</td><td><input placeholder="Key result"></td><td>${personSelect()}</td><td><input placeholder="Target"></td><td><input placeholder="Actual"></td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
