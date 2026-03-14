@@ -211,6 +211,15 @@ function openPickerDropdown(picker: HTMLElement, btn: HTMLElement): void {
     dropdown.style.top = `${rect.top - dropRect.height - 2}px`;
   }
 
+  // Dismiss on scroll (deferred to avoid immediate trigger)
+  const onScroll = () => {
+    closeActivePicker();
+    document.removeEventListener('scroll', onScroll, true);
+  };
+  requestAnimationFrame(() => {
+    document.addEventListener('scroll', onScroll, true);
+  });
+
   function updateValue(): void {
     const checks = listEl.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
     const selected: string[] = [];

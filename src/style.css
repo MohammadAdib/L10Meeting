@@ -1673,6 +1673,8 @@ td:has(.person-picker) { vertical-align: middle; }
 
   /* Meta grid: single column */
   .meta-grid { grid-template-columns: 1fr !important; }
+  .meta-field input[type="date"],
+  .meta-field input[type="time"] { min-height: 40px; }
 
   /* Segue: single column */
   .segue-grid { grid-template-columns: 1fr; }
