@@ -84,7 +84,7 @@ export function buildAppHTML(deptName?: string): string {
     <div class="top-bar-actions" id="topBarActions" style="opacity:0;pointer-events:none">
       <span class="autosave-status" id="autosaveStatus"></span>
       <button class="btn btn-outline" id="btnReset">Reset</button>
-      <button class="btn btn-primary" id="btnExport">Export Excel</button>
+      <button class="btn btn-primary" id="btnOpenExcel">Open in Excel</button>
     </div>
   </div>
   <div class="global-progress"><div class="global-progress-fill" id="globalProgress"></div></div>

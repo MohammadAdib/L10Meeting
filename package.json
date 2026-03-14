@@ -28,7 +28,8 @@
   },
   "pkg": {
     "assets": [
-      "dist/**/*"
+      "dist/**/*",
+      "L10_Meeting_Template.xlsx"
     ]
   }
 }

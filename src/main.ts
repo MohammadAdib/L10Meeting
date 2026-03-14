@@ -2,8 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange } from './utils';
-import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, isMeetingActive, cleanupAutoSave } from './storage';
-import { exportExcel } from './export';
+import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, isMeetingActive, cleanupAutoSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -98,6 +97,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     const controlDiv = document.querySelector('.meeting-control')!;
     controlDiv.innerHTML = '';
     document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
+    document.getElementById('btnReset')?.remove();
   } else {
     // New meeting: blur until started
     meetingTab.classList.add('blurred');
@@ -316,7 +316,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // Top bar buttons
   document.getElementById('btnReset')?.addEventListener('click', resetAll);
-  document.getElementById('btnExport')?.addEventListener('click', exportExcel);
+  document.getElementById('btnOpenExcel')?.addEventListener('click', openInExcel);
 
   // Add row buttons
   document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());

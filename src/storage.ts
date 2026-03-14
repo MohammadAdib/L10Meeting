@@ -257,3 +257,20 @@ function updateAutoSaveStatus(text: string): void {
   const el = document.getElementById('autosaveStatus');
   if (el) el.textContent = text;
 }
+
+/** Force a save then open the Excel file on the server */
+export async function openInExcel(): Promise<void> {
+  // Ensure latest data is saved first
+  await doAutoSave();
+  if (!_autoSaveDept || !_autoSaveMeetingId) {
+    showToast('Save the meeting first before opening in Excel.');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings/${_autoSaveMeetingId}/open`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to open');
+    showToast('Opening in Excel...');
+  } catch {
+    showToast('Could not open file in Excel.');
+  }
+}
