@@ -50,10 +50,8 @@ export function buildAppHTML(): string {
       <button class="meeting-start-btn" id="btnMeetingStart">&#9654; Start Meeting</button>
     </div>
     <div class="top-bar-actions">
-      <button class="btn btn-outline" id="btnSave">Save Draft</button>
-      <button class="btn btn-outline" id="btnLoad">Load Draft</button>
       <button class="btn btn-outline" id="btnReset">Reset</button>
-      <button class="btn btn-primary" id="btnExport">Export PDF</button>
+      <button class="btn btn-primary" id="btnExport">Export Excel</button>
     </div>
   </div>
   <div class="global-progress"><div class="global-progress-fill" id="globalProgress"></div></div>

@@ -2,8 +2,8 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer } from './timer';
 import { onStatusChange } from './utils';
-import { saveDraft, loadDraft, resetAll } from './storage';
-import { exportPDF } from './pdf';
+import { resetAll } from './storage';
+import { exportExcel } from './export';
 import { DEFAULT_MEASURABLES } from './types';
 import {
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
@@ -183,10 +183,8 @@ document.querySelectorAll<HTMLButtonElement>('[data-timer-reset]').forEach(btn =
 });
 
 // Top bar buttons
-document.getElementById('btnSave')?.addEventListener('click', saveDraft);
-document.getElementById('btnLoad')?.addEventListener('click', loadDraft);
 document.getElementById('btnReset')?.addEventListener('click', resetAll);
-document.getElementById('btnExport')?.addEventListener('click', exportPDF);
+document.getElementById('btnExport')?.addEventListener('click', exportExcel);
 
 // Add row buttons
 document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());

@@ -153,7 +153,7 @@ body.no-scroll { overflow: hidden; }
   align-items: center;
   gap: 6px;
 }
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent); color: #000; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.8); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
