@@ -709,6 +709,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   transition: all .3s;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
+.toast.toast-error { background: #e74c3c; }
 
 /* ── PERSON PICKER ── */
 .person-picker { position: relative; min-width: 100px; display: flex; align-items: center; }

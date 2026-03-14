@@ -661,7 +661,7 @@ function readWorkbookToJson(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet): Record
     }
     if (keyResults.some(kr => kr.length > 0)) data.keyResults = keyResults;
   }
-  data.headlinesTable = readTable(ws, 37, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+  data.headlinesTable = readTable(ws, 37, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.todoReviewTable = readTable(ws, 47, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.issuesListTable = readTable(ws, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
 
@@ -680,10 +680,10 @@ function readWorkbookToJson(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet): Record
   }
   data.idsBlocks = idsBlocks;
 
-  // Conclude section — data rows (after header rows)
-  const newTodoStart = 172;
-  const cascadingStart = 185;
-  const ratingStart = 193;
+  // Conclude section — data rows (matches blank.xlsx layout)
+  const newTodoStart = 171;
+  const cascadingStart = 184;
+  const ratingStart = 192;
 
   data.newTodoTable = readTable(ws, newTodoStart, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.cascadingTable = readTable(ws, cascadingStart, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
@@ -731,7 +731,7 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
 
   writeTable(ws, data.scorecardTable, 14, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   writeTable(ws, data.okrReviewTable, 26, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.headlinesTable, 37, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+  writeTable(ws, data.headlinesTable, 37, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   writeTable(ws, data.todoReviewTable, 47, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
 
   const todos = data.todoReviewTable || [];
@@ -752,42 +752,40 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
     if (fields[0]) ws.getCell(`B${base + 1}`).value = fields[0];
     if (fields[1]) ws.getCell(`B${base + 2}`).value = fields[1];
     if (fields[2]) ws.getCell(`B${base + 3}`).value = fields[2];
-    // Todos start after the "New To-Do(s)" header row
-    writeTable(ws, block.todos, base + 5, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
+    // Todos start at base+4 (Issue:+0, Root Cause:+1, Solution:+2, Todo header:+3, data:+4)
+    writeTable(ws, block.todos, base + 4, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
   });
 
-  writeTable(ws, data.newTodoTable, 172, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.cascadingTable, 185, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+  writeTable(ws, data.newTodoTable, 171, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
+  writeTable(ws, data.cascadingTable, 184, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
 
   const ratingTable = data.ratingTable || [];
   const ratingValues = data.ratingValues || [];
-  let ratingSum = 0, ratingCount = 0;
   ratingTable.forEach((row: string[], i: number) => {
-    if (i > 9) return;
-    const r = 193 + i;
+    if (i >= 10) return;
+    const r = 192 + i;
     ws.getCell(`A${r}`).value = row[0] || '';
     const rv = parseInt(ratingValues[i]) || 0;
     ws.getCell(`B${r}`).value = rv > 0 ? rv : '';
     ws.getCell(`C${r}`).value = row[2] || '';
-    if (rv > 0) { ratingSum += rv; ratingCount++; }
   });
-  ws.getCell('A199').value = 'Average Rating:';
-  ws.getCell('B199').value = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : '';
+  // Row 202 has AVERAGE formula in the template — update its range to cover all 10 slots
+  ws.getCell('B202').value = { formula: 'IFERROR(AVERAGE(B192:B201),"")' };
 
   const validations: { col: string; startRow: number; count: number; options: string[] }[] = [
     { col: 'E', startRow: 14, count: 7, options: ['On Track', 'Off Track', 'At Risk'] },
     { col: 'D', startRow: 26, count: 6, options: ['On Track', 'Off Track', 'At Risk'] },
-    { col: 'B', startRow: 37, count: 6, options: ['Customer', 'Employee'] },
-    { col: 'D', startRow: 37, count: 6, options: ['Yes', 'No'] },
-    { col: 'E', startRow: 37, count: 6, options: ['Yes', 'No'] },
+    { col: 'B', startRow: 37, count: 7, options: ['Customer', 'Employee'] },
+    { col: 'D', startRow: 37, count: 7, options: ['Yes', 'No'] },
+    { col: 'E', startRow: 37, count: 7, options: ['Yes', 'No'] },
     { col: 'D', startRow: 47, count: 7, options: ['Open', 'Done', 'Carry Over'] },
     { col: 'E', startRow: 47, count: 7, options: ['Yes', 'No'] },
     { col: 'C', startRow: 60, count: 16, options: ['High', 'Medium', 'Low'] },
     { col: 'D', startRow: 60, count: 16, options: ['Open', 'Solved', 'Next Meeting', 'Dropped'] },
     { col: 'F', startRow: 60, count: 16, options: ['Yes', 'No'] },
-    { col: 'D', startRow: 172, count: 11, options: ['High', 'Medium', 'Low'] },
-    { col: 'E', startRow: 172, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
-    { col: 'F', startRow: 185, count: 6, options: ['Yes', 'No'] },
+    { col: 'D', startRow: 171, count: 11, options: ['High', 'Medium', 'Low'] },
+    { col: 'E', startRow: 171, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
+    { col: 'F', startRow: 184, count: 6, options: ['Yes', 'No'] },
   ];
   for (const v of validations) {
     for (let i = 0; i < v.count; i++) {
@@ -801,10 +799,10 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
   for (let bi = 0; bi < issueStarts.length; bi++) {
     const base = issueStarts[bi];
     for (let i = 0; i < 4; i++) {
-      ws.getCell(`D${base + 5 + i}`).dataValidation = {
+      ws.getCell(`D${base + 4 + i}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: ['"High,Medium,Low"'],
       };
-      ws.getCell(`E${base + 5 + i}`).dataValidation = {
+      ws.getCell(`E${base + 4 + i}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: ['"Not Started,In Progress,Done"'],
       };
     }

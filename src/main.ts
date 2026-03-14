@@ -10,7 +10,7 @@ import {
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, setRating, updateTodoCompletion, updateAvgRating,
   addScorecardFullRow, addOkrFullRow, addKeyResultRow, buildKeyResultBlocks,
-  resetIdsIssueCount, setPeople,
+  resetIdsIssueCount, setPeople, suppressCapToast,
 } from './tables';
 import * as fs from './fs-service';
 import { getLogoUrl, initLogo, handleLogoClick } from './logo';
@@ -218,6 +218,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── For new meetings, carry over scorecard & OKR data from most recent meeting ──
   if (meetingId === 'new') {
+    suppressCapToast(true);
     try {
       const meetings = await fs.getMeetings(deptName);
       if (meetings.length > 0) {
@@ -257,6 +258,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
         }
       }
     } catch { /* silent */ }
+    suppressCapToast(false);
   }
 
   // ── If loading existing meeting, populate data ──

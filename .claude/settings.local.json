@@ -69,7 +69,10 @@
       "Bash(find /c/Users/MohammadAdib/Documents/GitHub/CompanyTools -maxdepth 1 -type f -name \"*.md\" -o -name \"*.txt\" -o -name \".env*\" 2>/dev/null | head -20)",
       "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && rm -rf server/ server-dist/ && rm -f tsconfig.server.json src/template.xlsx)",
       "Bash(npm run:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node dump_xlsx.js)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node dump_xlsx.cjs)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && node -e \"\nconst ExcelJS = require\\('exceljs'\\);\n\\(async \\(\\) => {\n  const wb = new ExcelJS.Workbook\\(\\);\n  await wb.xlsx.readFile\\('src/blank.xlsx'\\);\n  const ws = wb.getWorksheet\\('L10 Meeting'\\);\n  for \\(let r = 188; r <= 204; r++\\) {\n    const vals = [];\n    for \\(const col of ['A','B','C','D','E','F']\\) {\n      const v = ws.getCell\\(col+r\\).value;\n      if \\(v !== null && v !== undefined\\) vals.push\\(col + '=' + JSON.stringify\\(v\\).substring\\(0,80\\)\\);\n    }\n    if \\(vals.length > 0\\) console.log\\('Row ' + r + ': ' + vals.join\\(' | '\\)\\);\n    else console.log\\('Row ' + r + ': \\(empty\\)'\\);\n  }\n}\\)\\(\\);\n\")"
     ]
   }
 }

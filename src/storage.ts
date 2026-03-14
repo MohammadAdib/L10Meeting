@@ -3,7 +3,7 @@ import {
   updateTodoCompletion, updateAvgRating,
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
-  addRatingRow, addScorecardFullRow, addOkrFullRow,
+  addRatingRow, addScorecardFullRow, addOkrFullRow, suppressCapToast,
 } from './tables';
 import { createMeeting, saveMeeting } from './fs-service';
 
@@ -68,6 +68,11 @@ export function gatherMeetingData(): Record<string, unknown> {
 
 /** Populate DOM from saved meeting data */
 export function loadMeetingData(data: Record<string, unknown>): void {
+  suppressCapToast(true);
+  try { _loadMeetingData(data); } finally { suppressCapToast(false); }
+}
+
+function _loadMeetingData(data: Record<string, unknown>): void {
   const meta = data.meta as Record<string, string> | undefined;
   if (meta) {
     const map: Record<string, string> = {
@@ -174,6 +179,11 @@ export function loadMeetingData(data: Record<string, unknown>): void {
 
 /** Populate scorecard/OKR full tabs and key results from meeting data */
 export function loadScorecardOkrData(data: Record<string, unknown>): void {
+  suppressCapToast(true);
+  try { _loadScorecardOkrData(data); } finally { suppressCapToast(false); }
+}
+
+function _loadScorecardOkrData(data: Record<string, unknown>): void {
   // Scorecard full table
   const scRows = data.scorecardFullTable as string[][] | undefined;
   if (scRows) {

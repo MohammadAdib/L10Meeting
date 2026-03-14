@@ -34,3 +34,20 @@ export const DEFAULT_ROWS = {
   cascading: 3,
   rating: 3,
 } as const;
+
+/** Max rows per section — matches blank.xlsx template slot counts */
+export const MAX_ROWS = {
+  scorecardReview: 7,
+  okrReview: 6,
+  headlines: 7,
+  todoReview: 7,
+  issues: 16,
+  idsBlocks: 10,
+  idsTodos: 4,
+  newTodos: 11,
+  cascading: 6,
+  rating: 10,
+  scorecardFull: 10,
+  okrFull: 10,
+  keyResults: 3,
+} as const;
