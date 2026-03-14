@@ -1,5 +1,5 @@
 import logoUrl from './logo.png';
-import { onStatusChange } from './utils';
+import { onStatusChange, confirmDialog } from './utils';
 import { buildScorecardContent, buildOkrsContent } from './html';
 import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
 
@@ -384,7 +384,7 @@ function wireContentEvents(deptName: string): void {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = (btn as HTMLElement).dataset.id!;
-      if (!confirm(`Delete meeting ${id}?`)) return;
+      if (!await confirmDialog('Delete this meeting? This cannot be undone.', 'Delete', true)) return;
       try {
         await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${id}`, { method: 'DELETE' });
         loadDepartmentContent(deptName);
@@ -423,7 +423,7 @@ function wireContentEvents(deptName: string): void {
 
   // Delete department
   document.getElementById('btnDeleteDept')?.addEventListener('click', async () => {
-    if (!confirm(`Delete department "${deptName}" and ALL its meetings? This cannot be undone.`)) return;
+    if (!await confirmDialog(`Delete department "${deptName}" and all its meetings? This cannot be undone.`, 'Delete', true)) return;
     try {
       await fetch(`/api/departments/${encodeURIComponent(deptName)}`, { method: 'DELETE' });
       _selectedDept = null;

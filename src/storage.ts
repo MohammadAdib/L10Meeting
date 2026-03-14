@@ -1,4 +1,4 @@
-import { showToast, getTableRows, val, onStatusChange } from './utils';
+import { showToast, getTableRows, val, onStatusChange, confirmDialog } from './utils';
 import {
   updateTodoCompletion, updateAvgRating,
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
@@ -6,8 +6,8 @@ import {
   addRatingRow,
 } from './tables';
 
-export function resetAll(): void {
-  if (!confirm('Reset all fields? This cannot be undone.')) return;
+export async function resetAll(): Promise<void> {
+  if (!await confirmDialog('Reset all fields? This cannot be undone.', 'Reset', true)) return;
   location.reload();
 }
 

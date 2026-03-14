@@ -634,6 +634,43 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 }
 .sub-heading-spaced { margin-top: 24px; }
 
+/* ── DIALOG ── */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.dialog-overlay.visible { opacity: 1; }
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  min-width: 340px;
+  max-width: 440px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+  transform: scale(.95);
+  transition: transform .15s ease;
+}
+.dialog-overlay.visible .dialog { transform: scale(1); }
+.dialog-message {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed;

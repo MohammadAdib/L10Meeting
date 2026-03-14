@@ -36,6 +36,36 @@ export function val(id: string): string {
   return (document.getElementById(id) as HTMLInputElement)?.value ?? '';
 }
 
+/** Custom confirm dialog */
+export function confirmDialog(message: string, confirmLabel = 'Confirm', destructive = false): Promise<boolean> {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    const dialog = document.createElement('div');
+    dialog.className = 'dialog';
+    dialog.innerHTML = `
+      <p class="dialog-message">${message}</p>
+      <div class="dialog-actions">
+        <button class="btn btn-outline dialog-cancel">Cancel</button>
+        <button class="btn ${destructive ? 'btn-danger' : 'btn-primary'} dialog-confirm">${confirmLabel}</button>
+      </div>`;
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
+
+    const close = (result: boolean) => {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 150);
+      resolve(result);
+    };
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    dialog.querySelector('.dialog-cancel')!.addEventListener('click', () => close(false));
+    dialog.querySelector('.dialog-confirm')!.addEventListener('click', () => close(true));
+    (dialog.querySelector('.dialog-confirm') as HTMLElement).focus();
+  });
+}
+
 /** Show toast notification */
 export function showToast(msg: string): void {
   const t = document.querySelector<HTMLElement>('.toast');

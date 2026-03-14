@@ -1,7 +1,7 @@
 import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
-import { onStatusChange } from './utils';
+import { onStatusChange, confirmDialog } from './utils';
 import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
@@ -39,7 +39,7 @@ async function route() {
 
   // Confirm before leaving an active meeting
   if (leavingMeeting && isMeetingActive()) {
-    if (!confirm('You have an active meeting. Are you sure you want to leave?')) {
+    if (!await confirmDialog('You have an active meeting. Are you sure you want to leave?', 'Leave')) {
       // Restore the previous hash without triggering another route
       history.pushState(null, '', _previousHash);
       return;
@@ -101,7 +101,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     if (btnDelete) {
       btnDelete.style.display = '';
       btnDelete.addEventListener('click', async () => {
-        if (!confirm('Delete this meeting? This cannot be undone.')) return;
+        if (!await confirmDialog('Delete this meeting? This cannot be undone.', 'Delete', true)) return;
         try {
           const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${meetingId}`, { method: 'DELETE' });
           if (res.ok) {
