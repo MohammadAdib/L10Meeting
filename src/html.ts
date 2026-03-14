@@ -27,7 +27,7 @@ function tableHTML(id: string, headers: string[]): string {
   return `<table class="data-table" id="${id}"><thead><tr>${ths}</tr></thead><tbody></tbody></table>`;
 }
 
-export function buildAppHTML(): string {
+export function buildAppHTML(deptName?: string): string {
   const sidebarItems = SECTIONS.map((s, i) =>
     `<a class="sidebar-item${i === 0 ? ' active' : ''}" data-nav="${s.num}" href="#sec-${s.num}">
       <span class="sidebar-num">${s.num}</span>
@@ -35,10 +35,15 @@ export function buildAppHTML(): string {
     </a>`
   ).join('');
 
+  const backBtn = deptName
+    ? `<button class="back-btn" id="btnBackToDept" title="Back to ${deptName}">&#8592;</button>`
+    : '';
+
   return `
 <div class="top-bar-wrapper">
   <div class="top-bar">
     <div class="top-bar-left">
+      ${backBtn}
       <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
       <div class="top-bar-tabs">
         <button class="top-tab active" data-tab="meeting">L10 Meeting</button>
@@ -47,13 +52,7 @@ export function buildAppHTML(): string {
       </div>
     </div>
     <div class="top-bar-actions" id="topBarActions" style="opacity:0;pointer-events:none">
-      <div class="server-only" style="display:none">
-        <button class="btn btn-outline" id="btnSave">Save</button>
-        <div class="load-dropdown-wrap">
-          <button class="btn btn-outline" id="btnLoadMenu">Load</button>
-          <div class="load-dropdown" id="loadDropdown"></div>
-        </div>
-      </div>
+      <span class="autosave-status" id="autosaveStatus"></span>
       <button class="btn btn-outline" id="btnReset">Reset</button>
       <button class="btn btn-primary" id="btnExport">Export Excel</button>
     </div>

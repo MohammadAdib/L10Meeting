@@ -136,56 +136,48 @@ export function loadMeetingData(data: Record<string, unknown>): void {
   updateAvgRating();
 }
 
-/** Check if server API is available (desktop mode) */
-export async function isServerAvailable(): Promise<boolean> {
-  try {
-    const res = await fetch('/api/meetings');
-    return res.ok;
-  } catch {
-    return false;
-  }
+/** Auto-save: debounced PUT to server */
+let _autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let _autoSaveDept: string = '';
+let _autoSaveMeetingId: string = '';
+
+export function setupAutoSave(dept: string, meetingId: string): void {
+  _autoSaveDept = dept;
+  _autoSaveMeetingId = meetingId;
+
+  // Listen for any input changes within the meeting view
+  const container = document.getElementById('app');
+  if (!container) return;
+
+  const trigger = () => {
+    if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+    updateAutoSaveStatus('Unsaved changes...');
+    _autoSaveTimer = setTimeout(() => doAutoSave(), 3000);
+  };
+
+  container.addEventListener('input', trigger);
+  container.addEventListener('change', trigger);
 }
 
-/** Save meeting to server */
-export async function saveMeeting(): Promise<void> {
-  const data = gatherMeetingData();
-  const meta = data.meta as Record<string, string>;
-  const date = meta.date || new Date().toISOString().split('T')[0];
-  const team = (meta.team || 'Meeting').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_');
-  const filename = `${date}_${team}.json`;
-
+async function doAutoSave(): Promise<void> {
+  if (!_autoSaveDept || !_autoSaveMeetingId) return;
+  updateAutoSaveStatus('Saving...');
   try {
-    const res = await fetch(`/api/meetings/${filename}`, {
-      method: 'POST',
+    const data = gatherMeetingData();
+    data.lastSaved = new Date().toISOString();
+    const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings/${_autoSaveMeetingId}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Save failed');
-    showToast('Meeting saved!');
+    updateAutoSaveStatus('Saved');
   } catch {
-    showToast('Error saving meeting');
+    updateAutoSaveStatus('Save failed');
   }
 }
 
-/** List saved meetings from server */
-export async function listMeetings(): Promise<{ filename: string; modified: string }[]> {
-  try {
-    const res = await fetch('/api/meetings');
-    return await res.json();
-  } catch {
-    return [];
-  }
-}
-
-/** Load a saved meeting from server */
-export async function loadMeeting(filename: string): Promise<void> {
-  try {
-    const res = await fetch(`/api/meetings/${filename}`);
-    if (!res.ok) throw new Error('Load failed');
-    const data = await res.json();
-    loadMeetingData(data);
-    showToast('Meeting loaded!');
-  } catch {
-    showToast('Error loading meeting');
-  }
+function updateAutoSaveStatus(text: string): void {
+  const el = document.getElementById('autosaveStatus');
+  if (el) el.textContent = text;
 }

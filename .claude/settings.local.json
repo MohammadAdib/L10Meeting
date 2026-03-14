@@ -37,7 +37,15 @@
       "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; rm -f C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/release/L10Meeting.exe)",
       "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node server-dist/index.js 2>&1)",
       "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && tsc -p tsconfig.server.json && mv server-dist/index.js server-dist/index.cjs && node server-dist/index.cjs 2>&1)",
-      "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; rm -f C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/release/L10Meeting.exe C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/server-dist/index.cjs 2>/dev/null; echo \"cleaned\")"
+      "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; rm -f C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/release/L10Meeting.exe C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/server-dist/index.cjs 2>/dev/null; echo \"cleaned\")",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc --noEmit 2>&1 | head -50)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc -p tsconfig.server.json --noEmit 2>&1 | head -50)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx vite build 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc --noEmit 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx tsc --noEmit 2>&1)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx tsc -p tsconfig.server.json --noEmit 2>&1)",
+      "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; npx kill-port 3847 2>/dev/null; node -e \"require\\('child_process'\\).execSync\\('netstat -ano | findstr :3847', {stdio:'pipe'}\\).toString\\(\\)\" 2>/dev/null || echo \"port is free\")",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node server-dist/index.cjs 2>&1)"
     ]
   }
 }

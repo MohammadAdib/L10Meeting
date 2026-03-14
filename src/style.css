@@ -648,6 +648,203 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+/* ── BACK BUTTON ── */
+.back-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.8);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── TOP BAR TITLE ── */
+.top-bar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255,255,255,.9);
+  align-self: center;
+  white-space: nowrap;
+}
+
+/* ── AUTO-SAVE STATUS ── */
+.autosave-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  align-self: center;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+
+/* ── ADMIN PORTAL ── */
+.admin-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+}
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.admin-header h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+}
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.admin-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 32px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+/* ── DEPARTMENT CARDS ── */
+.dept-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.dept-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(255,140,66,.15);
+  transform: translateY(-2px);
+}
+.dept-card-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.dept-card-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── DEPARTMENT VIEW ── */
+.dept-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.dept-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dept-section-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── PEOPLE LIST ── */
+.people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.people-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.people-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border .15s;
+}
+.people-input:focus { border-color: var(--accent); }
+.people-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all .15s;
+}
+.people-remove:hover { color: var(--red); background: var(--red-bg); }
+
+/* ── MEETINGS LIST ── */
+.meetings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meeting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.meeting-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.meeting-item-date {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.meeting-item-saved {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: 1;
+  text-align: right;
+  margin-right: 12px;
+}
+.meeting-item-delete {
+  font-size: 16px;
+  padding: 4px 8px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.meeting-item-delete:hover {
+  color: var(--red);
+  border-color: var(--red);
+  background: var(--red-bg);
+}
+
 /* ── PRINT / PDF ── */
 @media print {
   .top-bar-wrapper, .section-nav, .sidebar, .btn, .timer-btn, .timer-badge, .row-delete,

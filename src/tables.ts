@@ -2,6 +2,10 @@ import { statusSelect, deleteBtn } from './utils';
 
 let idsIssueCount = 0;
 
+export function resetIdsIssueCount(): void {
+  idsIssueCount = 0;
+}
+
 export function addScorecardRow(name = ''): void {
   const tb = document.querySelector('#scorecardTable tbody');
   if (!tb) return;

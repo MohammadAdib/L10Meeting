@@ -10,6 +10,15 @@ export function initTimers(): void {
   }
 }
 
+export function cleanupTimers(): void {
+  for (const key of Object.keys(timers)) {
+    const n = parseInt(key);
+    const t = timers[n];
+    if (t && t.interval) clearInterval(t.interval);
+    delete timers[n];
+  }
+}
+
 export function toggleTimer(n: number): void {
   const t = timers[n];
   if (t.running) {
