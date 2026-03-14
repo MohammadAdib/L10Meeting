@@ -1233,8 +1233,9 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   margin-top: 20px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(255,255,255,.03);
-  color: var(--text-muted);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-light);
+  color: var(--accent);
   font-size: 12px;
   line-height: 1.5;
   text-align: left;
