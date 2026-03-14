@@ -1224,7 +1224,7 @@ td:has(.person-picker) { vertical-align: middle; }
 
 /* ── DEPARTMENT SPLIT LAYOUT ── */
 .dept-layout { display: flex; gap: 24px; }
-.dept-left { flex: 0 0 25%; min-width: 0; }
+.dept-left { flex: 0 0 25%; min-width: 400px; }
 .dept-right { flex: 1; min-width: 0; transition: opacity .3s ease, transform .3s ease; }
 .dept-right.dept-loading { opacity: 0; transform: translateY(8px); }
 .dept-right .data-table { min-width: 900px; }
@@ -1605,6 +1605,13 @@ td:has(.person-picker) { vertical-align: middle; }
 .fp-tip.fp-tip-green { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.25); color: #16a34a; }
 .fp-tip.fp-tip-green .fp-tip-icon { color: #16a34a; }
 
+/* ── MEDIUM / SQUARE ── */
+@media (max-width: 1100px) {
+  .dept-layout { flex-direction: column; }
+  .dept-left { flex: none; width: 100%; }
+  .dept-right { flex: none; width: 100%; }
+}
+
 /* ── MOBILE / NARROW ── */
 @media (max-width: 768px) {
   /* Top bar: compact */
@@ -1683,4 +1690,70 @@ td:has(.person-picker) { vertical-align: middle; }
 
   /* Blur overflow on narrow */
   .app-layout:has(#tab-meeting.blurred) { overflow: hidden; }
+
+  /* ── Admin / Department page ── */
+
+  /* Admin layout: stack */
+  .admin-layout { flex-direction: column; overflow: auto; }
+
+  /* Admin sidebar: horizontal strip */
+  .admin-sidebar {
+    position: static;
+    width: 100%;
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 50;
+  }
+  .admin-sidebar-header {
+    padding: 10px 12px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    gap: 8px;
+  }
+  .admin-sidebar-list {
+    flex-direction: row;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .admin-sidebar-list::-webkit-scrollbar { display: none; }
+  .admin-sidebar .sidebar-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+  .admin-sidebar-footer {
+    flex-direction: row;
+    border-top: none;
+    border-left: 1px solid var(--border);
+    padding: 8px 12px;
+    flex-shrink: 0;
+    gap: 2px;
+  }
+  .admin-sidebar-link { padding: 6px; font-size: 12px; }
+  .admin-sidebar-empty { white-space: nowrap; padding: 8px; }
+
+  /* Admin content: full width */
+  .admin-content { margin-left: 0; padding: 20px 12px 60px; }
+
+  /* Dept header: wrap */
+  .dept-header { flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .dept-header h1 { font-size: 20px; }
+
+  /* Dept layout: stack vertically */
+  .dept-layout { flex-direction: column; gap: 16px; }
+  .dept-left { flex: none; width: 100%; }
+  .dept-right { flex: none; width: 100%; }
+  .dept-right .data-table { min-width: 700px; }
+
+  /* Dept sections: less padding */
+  .dept-section { padding: 14px; }
+
+  /* Top bar title: smaller */
+  .top-bar-title { font-size: 13px; }
 }
