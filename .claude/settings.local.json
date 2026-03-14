@@ -59,7 +59,12 @@
       "Bash(taskkill //F //IM node.exe 2>&1; cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\" && cmd //c \"ren departments _tmp\" && cmd //c \"ren _tmp Departments\")",
       "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc -p tsconfig.server.json && del server-dist\\\\index.cjs && ren server-dist\\\\index.js index.cjs)",
       "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc -p tsconfig.server.json && rm server-dist/index.cjs && cmd //c \"ren server-dist\\\\\\\\index.js index.cjs\")",
-      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npm run package 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npm run package 2>&1)",
+      "Bash(find \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools/data\" -name \"*.xlsx\" -o -name \"*.json\" 2>/dev/null | head -20)",
+      "Bash(ls \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\"/*.xlsx 2>/dev/null; ls \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\src\"/*.xlsx 2>/dev/null)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run build:server 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && node -e \"\nconst ExcelJS = require\\('exceljs'\\);\n\\(async \\(\\) => {\n  const wb = new ExcelJS.Workbook\\(\\);\n  // Find the imported file\n  const fs = require\\('fs'\\);\n  const dir = 'data/Departments';\n  const depts = fs.readdirSync\\(dir\\);\n  for \\(const dept of depts\\) {\n    const mDir = dir + '/' + dept + '/meetings';\n    if \\(!fs.existsSync\\(mDir\\)\\) continue;\n    const files = fs.readdirSync\\(mDir\\).filter\\(f => f.endsWith\\('.xlsx'\\)\\);\n    for \\(const f of files\\) {\n      console.log\\('Found:', mDir + '/' + f\\);\n    }\n  }\n}\\)\\(\\);\n\")",
+      "Bash(git stash:*)"
     ]
   }
 }
