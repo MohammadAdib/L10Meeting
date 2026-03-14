@@ -11,8 +11,6 @@ node_modules
 .vite
 dist
 dist-ssr
-server-dist
-release
 data
 *.local
 

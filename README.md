@@ -1,51 +1,37 @@
-# L10 Meeting Tool
+# L10 Meeting Manager
 
-Internal meeting management tool for running EOS L10 meetings. Built for Titan Dynamics.
+A web app for running EOS L10 meetings. Runs entirely in the browser with no server required — data is stored directly on your computer using the File System Access API.
 
-Features:
+## Features
+
 - Department management with people lists
-- L10 meeting workflow (segue, scorecard review, OKR review, headlines, to-do review, IDS, conclude)
+- L10 meeting workflow (segue, scorecard, OKR review, headlines, to-do review, IDS, conclude)
 - Scorecard and OKR tracking across meetings
-- Auto-save with debounce
-- Excel export
-- Standalone Windows executable
+- Auto-save to Excel files on your local filesystem
+- Custom company logo support
+- Works with any cloud-synced folder (OneDrive, Google Drive, Dropbox)
 
-## Running Locally
+## Requirements
+
+- A Chromium-based browser (Chrome, Edge, Opera)
+
+## Development
 
 ```
 npm install
-npm run start
-```
-
-This builds the frontend and server, then starts it at `http://localhost:3847`.
-
-### Development with Hot Reload
-
-For frontend hot reload during development, run two terminals:
-
-Terminal 1 — build and start the API server:
-```
-npm run build:server
-node server-dist/index.cjs
-```
-
-Terminal 2 — start Vite dev server:
-```
 npm run dev
 ```
 
-Then open `http://localhost:5173/CompanyTools/`. Frontend changes hot reload automatically. API calls are proxied to the server on port 3847.
+Open `http://localhost:5173/CompanyTools/`.
 
-## Building the Executable
-
-```
-npm run package
-```
-
-Or use the batch script:
+## Production Build
 
 ```
-build.bat
+npm run build
 ```
 
-The executable will be output to `release/L10Meeting.exe`. Run it to start the server and auto-open the browser. Meeting data is stored in a `data/` folder next to the executable.
+Deploy the `dist/` folder to any static host (GitHub Pages, Vercel, Netlify, etc.).
+
+## How It Works
+
+On first visit, the app asks you to select a folder on your computer. All meeting data (Excel files, people lists, logo) is stored directly in that folder. The folder choice is remembered in the browser via IndexedDB so you only need to pick it once.
