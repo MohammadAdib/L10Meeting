@@ -1,9 +1,9 @@
-import { showToast, getTableRows, val, onStatusChange, confirmDialog } from './utils';
+import { showToast, getTableRows, val, confirmDialog, populateTableRows } from './utils';
 import {
   updateTodoCompletion, updateAvgRating,
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
-  addRatingRow,
+  addRatingRow, addScorecardFullRow, addOkrFullRow,
 } from './tables';
 
 export async function resetAll(): Promise<void> {
@@ -123,23 +123,12 @@ export function loadMeetingData(data: Record<string, unknown>): void {
   for (const tableId of tableIds) {
     const rows = data[tableId] as string[][] | undefined;
     if (!rows) continue;
-    // Add extra rows if needed
     const adder = tableAdders[tableId];
     if (adder) {
       const existing = document.querySelectorAll(`#${tableId} tbody tr`).length;
       for (let i = existing; i < rows.length; i++) adder();
     }
-    const trs = document.querySelectorAll(`#${tableId} tbody tr`);
-    rows.forEach((cells, ri) => {
-      if (ri >= trs.length) return;
-      const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-      cells.forEach((v, ci) => {
-        if (ci < els.length) {
-          els[ci].value = v;
-          if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
-        }
-      });
-    });
+    populateTableRows(`#${tableId}`, rows);
   }
 
   // IDS blocks — add extra blocks if needed, then populate fields and todos
@@ -154,23 +143,12 @@ export function loadMeetingData(data: Record<string, unknown>): void {
       const tas = blocks[bi].querySelectorAll<HTMLTextAreaElement>('.ids-field textarea');
       block.fields.forEach((v, fi) => { if (fi < tas.length) tas[fi].value = v; });
 
-      // Populate todos within this IDS block
       const todos = block.todos;
       if (todos && todos.length > 0) {
         const issueN = bi + 1;
         const existingTodos = document.querySelectorAll(`#idsTodo-${issueN} tbody tr`).length;
         for (let i = existingTodos; i < todos.length; i++) addIDSTodoRow(issueN);
-        const todoTrs = document.querySelectorAll(`#idsTodo-${issueN} tbody tr`);
-        todos.forEach((cells, ri) => {
-          if (ri >= todoTrs.length) return;
-          const els = todoTrs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-          cells.forEach((v, ci) => {
-            if (ci < els.length) {
-              els[ci].value = v;
-              if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
-            }
-          });
-        });
+        populateTableRows(`#idsTodo-${issueN}`, todos);
       }
     });
   }
@@ -178,19 +156,7 @@ export function loadMeetingData(data: Record<string, unknown>): void {
   // Key results
   const keyResults = data.keyResults as string[][][] | undefined;
   if (keyResults) {
-    keyResults.forEach((rows, ki) => {
-      const trs = document.querySelectorAll(`#keyResults-${ki + 1} tbody tr`);
-      rows.forEach((cells, ri) => {
-        if (ri >= trs.length) return;
-        const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-        cells.forEach((v, ci) => {
-          if (ci < els.length) {
-            els[ci].value = v;
-            if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
-          }
-        });
-      });
-    });
+    keyResults.forEach((rows, ki) => populateTableRows(`#keyResults-${ki + 1}`, rows));
   }
 
   // Rating values + star visuals
@@ -208,6 +174,44 @@ export function loadMeetingData(data: Record<string, unknown>): void {
 
   updateTodoCompletion();
   updateAvgRating();
+}
+
+/** Populate scorecard/OKR full tabs and key results from meeting data */
+export function loadScorecardOkrData(data: Record<string, unknown>): void {
+  // Scorecard full table
+  const scRows = data.scorecardFullTable as string[][] | undefined;
+  if (scRows) {
+    const existing = document.querySelectorAll('#scorecardFullTable tbody tr').length;
+    for (let i = existing; i < scRows.length; i++) addScorecardFullRow();
+    populateTableRows('#scorecardFullTable', scRows);
+  }
+
+  // OKR full table
+  const okrRows = data.okrFullTable as string[][] | undefined;
+  if (okrRows) {
+    const existing = document.querySelectorAll('#okrFullTable tbody tr').length;
+    for (let i = existing; i < okrRows.length; i++) addOkrFullRow();
+    populateTableRows('#okrFullTable', okrRows);
+  }
+
+  // OKR metadata
+  const okrMeta = data.okrMeta as Record<string, string> | undefined;
+  if (okrMeta) {
+    const map: Record<string, string> = {
+      quarter: 'okrQuarter', year: 'okrYear',
+      startDate: 'okrStartDate', targetDate: 'okrTargetDate',
+    };
+    for (const [key, id] of Object.entries(map)) {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el && okrMeta[key]) el.value = okrMeta[key];
+    }
+  }
+
+  // Key results
+  const keyResults = data.keyResults as string[][][] | undefined;
+  if (keyResults) {
+    keyResults.forEach((rows, ki) => populateTableRows(`#keyResults-${ki + 1}`, rows));
+  }
 }
 
 /** Auto-save: debounced PUT to server */

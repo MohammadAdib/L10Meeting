@@ -1,7 +1,8 @@
 import logoUrl from './logo.png';
-import { onStatusChange, confirmDialog } from './utils';
+import { confirmDialog } from './utils';
 import { buildScorecardContent, buildOkrsContent } from './html';
 import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
+import { loadScorecardOkrData } from './storage';
 
 let _selectedDept: string | null = null;
 let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -226,7 +227,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
     </div>
   `;
 
-  // Populate scorecard/OKR rows from last meeting, or empty defaults
+  // Populate scorecard/OKR rows — use defaults or previous meeting count
   const scCount = scorecardRows.length || 3;
   for (let i = 0; i < scCount; i++) addScorecardFullRow();
 
@@ -234,63 +235,9 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
   for (let i = 1; i <= okCount; i++) addOkrFullRow('', i);
   buildKeyResultBlocks();
 
-  // Load data from last meeting into the tables
+  // Load data from last meeting using shared loader
   if (lastMeetingData) {
-    // Scorecard
-    if (scorecardRows.length > 0) {
-      const trs = document.querySelectorAll('#scorecardFullTable tbody tr');
-      scorecardRows.forEach((cells, ri) => {
-        if (ri >= trs.length) return;
-        const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-        cells.forEach((v, ci) => { if (ci < els.length) els[ci].value = v; });
-      });
-    }
-
-    // OKR table
-    if (okrRows.length > 0) {
-      const trs = document.querySelectorAll('#okrFullTable tbody tr');
-      okrRows.forEach((cells, ri) => {
-        if (ri >= trs.length) return;
-        const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-        cells.forEach((v, ci) => {
-          if (ci < els.length) {
-            els[ci].value = v;
-            if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
-          }
-        });
-      });
-    }
-
-    // OKR meta
-    const okrMeta = lastMeetingData.okrMeta as Record<string, string> | undefined;
-    if (okrMeta) {
-      const map: Record<string, string> = {
-        quarter: 'okrQuarter', year: 'okrYear',
-        startDate: 'okrStartDate', targetDate: 'okrTargetDate',
-      };
-      for (const [key, id] of Object.entries(map)) {
-        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-        if (el && okrMeta[key]) el.value = okrMeta[key];
-      }
-    }
-
-    // Key results
-    const keyResults = lastMeetingData.keyResults as string[][][] | undefined;
-    if (keyResults) {
-      keyResults.forEach((rows, ki) => {
-        const trs = document.querySelectorAll(`#keyResults-${ki + 1} tbody tr`);
-        rows.forEach((cells, ri) => {
-          if (ri >= trs.length) return;
-          const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-          cells.forEach((v, ci) => {
-            if (ci < els.length) {
-              els[ci].value = v;
-              if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
-            }
-          });
-        });
-      });
-    }
+    loadScorecardOkrData(lastMeetingData as Record<string, unknown>);
   }
 
   // Make dept-right read-only: disable all inputs/selects and hide add/delete buttons

@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog } from './utils';
-import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
+import { resetAll, loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -227,38 +227,47 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       if (listRes.ok) {
         const meetings = await listRes.json();
         if (meetings.length > 0) {
-          // Sort by date descending, pick latest
-          meetings.sort((a: any, b: any) => b.date.localeCompare(a.date));
+          // Sort by last saved descending, pick latest
+          meetings.sort((a: any, b: any) => (b.lastSaved || '').localeCompare(a.lastSaved || ''));
           const lastId = meetings[0].id;
           const lastRes = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${lastId}`);
           if (lastRes.ok) {
             const lastData = await lastRes.json();
             // Carry over scorecard rows
-            const scRows = lastData.scorecardTable as string[][] | undefined;
-            if (scRows) {
-              const trs = document.querySelectorAll('#scorecardTable tbody tr');
-              scRows.forEach((cells, ri) => {
-                if (ri >= trs.length) return;
-                const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-                // Only carry over KPI name (0), owner (1), goal (2) — skip actual, status, notes
-                [0, 1, 2].forEach(ci => {
+            const scRows = (lastData.scorecardTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+            if (scRows && scRows.length > 0) {
+              // Clear default rows and rebuild from previous meeting data
+              const scTbody = document.querySelector('#scorecardTable tbody');
+              if (scTbody) scTbody.innerHTML = '';
+              scRows.forEach((cells: string[]) => {
+                addScorecardRow(cells[0] || '');
+                const tr = document.querySelector('#scorecardTable tbody tr:last-child');
+                if (!tr) return;
+                const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+                // Set owner (1) and goal (2) — skip actual, status, notes
+                [1, 2].forEach(ci => {
                   if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
                 });
               });
             }
             // Carry over OKR review rows
-            const okrRows = lastData.okrReviewTable as string[][] | undefined;
-            if (okrRows) {
-              const trs = document.querySelectorAll('#okrReviewTable tbody tr');
-              okrRows.forEach((cells, ri) => {
-                if (ri >= trs.length) return;
-                const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-                // Carry over OKR description (0), owner (1), due date (2) — skip status, %, notes
-                [0, 1, 2].forEach(ci => {
+            const okrRows = (lastData.okrReviewTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+            if (okrRows && okrRows.length > 0) {
+              const okrTbody = document.querySelector('#okrReviewTable tbody');
+              if (okrTbody) okrTbody.innerHTML = '';
+              okrRows.forEach((cells: string[]) => {
+                addOkrReviewRow(cells[0] || '');
+                const tr = document.querySelector('#okrReviewTable tbody tr:last-child');
+                if (!tr) return;
+                const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+                // Set owner (1) and due date (2) — skip status, %, notes
+                [1, 2].forEach(ci => {
                   if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
                 });
               });
             }
+            // Carry over full scorecard tracker, OKR tracker, and key results
+            loadScorecardOkrData(lastData);
           }
         }
       }

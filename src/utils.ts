@@ -66,6 +66,21 @@ export function confirmDialog(message: string, confirmLabel = 'Confirm', destruc
   });
 }
 
+/** Populate a table's rows from saved data arrays */
+export function populateTableRows(tableSelector: string, rows: string[][]): void {
+  const trs = document.querySelectorAll(`${tableSelector} tbody tr`);
+  rows.forEach((cells, ri) => {
+    if (ri >= trs.length) return;
+    const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    cells.forEach((v, ci) => {
+      if (ci < els.length) {
+        els[ci].value = v;
+        if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
+      }
+    });
+  });
+}
+
 /** Show toast notification */
 export function showToast(msg: string): void {
   const t = document.querySelector<HTMLElement>('.toast');
