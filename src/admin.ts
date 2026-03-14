@@ -176,8 +176,8 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
     <div class="dept-header">
       <h1>${deptName}</h1>
       <div class="dept-header-actions">
-        <button class="btn btn-outline btn-sm" id="btnRenameDept">Rename</button>
-        <button class="btn btn-outline btn-sm" id="btnDeleteDept" style="border-color:var(--red);color:var(--red);">Delete</button>
+        <button class="btn btn-outline" id="btnRenameDept">Rename</button>
+        <button class="btn btn-outline" id="btnDeleteDept" style="border-color:var(--red);color:var(--red);">Delete</button>
       </div>
     </div>
 
@@ -186,7 +186,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
         <div class="dept-section">
           <div class="dept-section-header">
             <h2>People</h2>
-            <button class="btn btn-outline-dark btn-sm" id="btnAddPerson">+ Add Person</button>
+            <button class="btn btn-outline-dark" id="btnAddPerson">+ Add Person</button>
           </div>
           <div class="people-list" id="peopleList">
             ${peopleItems || '<div class="admin-empty" style="padding:12px;">No people added yet.</div>'}
