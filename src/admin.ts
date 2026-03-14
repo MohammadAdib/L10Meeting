@@ -1,19 +1,46 @@
 import logoUrl from './logo.png';
+import { onStatusChange } from './utils';
+import { buildScorecardContent, buildOkrsContent } from './html';
+import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
 
-export async function renderAdminPortal(): Promise<void> {
+let _selectedDept: string | null = null;
+let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function savePeopleDebounced(deptName: string): void {
+  if (_peopleSaveTimer) clearTimeout(_peopleSaveTimer);
+  _peopleSaveTimer = setTimeout(async () => {
+    const inputs = document.querySelectorAll<HTMLInputElement>('#peopleList .people-input');
+    const names = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    try {
+      await fetch(`/api/departments/${encodeURIComponent(deptName)}/people`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ people: names }),
+      });
+    } catch { /* silent */ }
+  }, 1000);
+}
+
+export async function renderAdminPortal(selectedDept?: string): Promise<void> {
+  _selectedDept = selectedDept || null;
   const app = document.getElementById('app')!;
 
-  let departments: { name: string; meetingCount: number }[] = [];
+  let departments: { name: string; peopleCount: number }[] = [];
   try {
     const res = await fetch('/api/departments');
     departments = await res.json();
   } catch { /* empty */ }
 
-  const cards = departments.map(d => `
-    <div class="dept-card" data-dept="${d.name}">
-      <div class="dept-card-name">${d.name}</div>
-      <div class="dept-card-meta">${d.meetingCount} meeting${d.meetingCount !== 1 ? 's' : ''}</div>
-    </div>
+  // Auto-select first department if none specified
+  if (!_selectedDept && departments.length > 0) {
+    _selectedDept = departments[0].name;
+  }
+
+  const sidebarItems = departments.map(d => `
+    <a class="sidebar-item${d.name === _selectedDept ? ' active' : ''}" data-dept="${d.name}">
+      <span class="sidebar-label">${d.name}</span>
+      <span class="sidebar-meta">${d.peopleCount}</span>
+    </a>
   `).join('');
 
   app.innerHTML = `
@@ -23,26 +50,43 @@ export async function renderAdminPortal(): Promise<void> {
           <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
           <div class="top-bar-title">L10 Meeting Manager</div>
         </div>
-        <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
-        </div>
+        <div class="top-bar-actions" style="opacity:1;pointer-events:auto"></div>
       </div>
     </div>
-    <div class="admin-container">
-      <div class="admin-header">
-        <h1>Departments</h1>
-        <button class="btn btn-primary" id="btnAddDept">+ Add Department</button>
-      </div>
-      <div class="admin-grid">
-        ${cards || '<div class="admin-empty">No departments yet. Create one to get started.</div>'}
+    <div class="admin-layout">
+      <nav class="admin-sidebar">
+        <div class="admin-sidebar-header">
+          <span>Departments</span>
+          <button class="admin-sidebar-add" id="btnAddDept" title="Add Department">+</button>
+        </div>
+        <div class="admin-sidebar-list">
+          ${sidebarItems || '<div class="admin-sidebar-empty">No departments</div>'}
+        </div>
+      </nav>
+      <div class="admin-content" id="adminContent">
+        ${_selectedDept ? '' : '<div class="admin-empty-content">Create a department to get started.</div>'}
       </div>
     </div>
     <div class="toast"></div>
   `;
 
-  // Wire up card clicks
-  app.querySelectorAll<HTMLElement>('.dept-card').forEach(card => {
-    card.addEventListener('click', () => {
-      location.hash = `#/dept/${encodeURIComponent(card.dataset.dept!)}`;
+  // Logo click -> back to landing page
+  document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
+    location.hash = '#/';
+  });
+
+  // Wire sidebar clicks
+  app.querySelectorAll<HTMLElement>('.sidebar-item[data-dept]').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const dept = item.dataset.dept!;
+      if (dept === _selectedDept) return;
+      // Update active state
+      app.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      _selectedDept = dept;
+      location.hash = `#/dept/${encodeURIComponent(dept)}`;
+      loadDepartmentContent(dept);
     });
   });
 
@@ -61,17 +105,28 @@ export async function renderAdminPortal(): Promise<void> {
         alert(err.error || 'Failed to create department');
         return;
       }
-      location.hash = `#/dept/${encodeURIComponent(name.trim())}`;
+      // Re-render with new dept selected
+      await renderAdminPortal(name.trim());
     } catch {
       alert('Failed to create department');
     }
   });
+
+  // Load selected department content
+  if (_selectedDept) {
+    await loadDepartmentContent(_selectedDept);
+  }
 }
 
-export async function renderDepartmentView(deptName: string): Promise<void> {
-  const app = document.getElementById('app')!;
+async function loadDepartmentContent(deptName: string): Promise<void> {
+  const content = document.getElementById('adminContent');
+  if (!content) return;
 
-  // Fetch people and meetings in parallel
+  // Trigger fade-slide animation on content swap
+  content.style.animation = 'none';
+  content.offsetHeight; // force reflow
+  content.style.animation = 'fadeSlideRight .3s ease forwards';
+
   let people: string[] = [];
   let meetings: { id: string; date: string; lastSaved: string }[] = [];
 
@@ -83,6 +138,18 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
     people = await pRes.json();
     meetings = await mRes.json();
   } catch { /* empty */ }
+
+  // Load last meeting data for scorecard/OKR (read-only)
+  let lastMeetingData: Record<string, unknown> | null = null;
+  if (meetings.length > 0) {
+    try {
+      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${meetings[0].id}`);
+      if (res.ok) lastMeetingData = await res.json();
+    } catch { /* empty */ }
+  }
+
+  const scorecardRows = (lastMeetingData?.scorecardFullTable as string[][] | undefined) || [];
+  const okrRows = (lastMeetingData?.okrFullTable as string[][] | undefined) || [];
 
   const peopleItems = people.map((p, i) => `
     <div class="people-item" data-index="${i}">
@@ -102,56 +169,131 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
     `;
   }).join('');
 
-  app.innerHTML = `
-    <div class="top-bar-wrapper">
-      <div class="top-bar">
-        <div class="top-bar-left">
-          <button class="back-btn" id="btnBack" title="Back to departments">&#8592;</button>
-          <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
-          <div class="top-bar-title">${deptName}</div>
-        </div>
-        <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
-          <button class="btn btn-outline" id="btnRenameDept">Rename</button>
-          <button class="btn btn-outline" id="btnDeleteDept" style="border-color:var(--red);color:var(--red);">Delete Dept</button>
-        </div>
+  content.innerHTML = `
+    <div class="dept-header">
+      <h1>${deptName}</h1>
+      <div class="dept-header-actions">
+        <button class="btn btn-outline btn-sm" id="btnRenameDept">Rename</button>
+        <button class="btn btn-outline btn-sm" id="btnDeleteDept" style="border-color:var(--red);color:var(--red);">Delete</button>
       </div>
     </div>
-    <div class="admin-container">
-      <!-- People Section -->
-      <div class="dept-section">
-        <div class="dept-section-header">
-          <h2>People</h2>
-          <button class="btn btn-outline-dark btn-sm" id="btnAddPerson">+ Add Person</button>
+
+    <div class="dept-layout">
+      <div class="dept-left">
+        <div class="dept-section">
+          <div class="dept-section-header">
+            <h2>People</h2>
+            <button class="btn btn-outline-dark btn-sm" id="btnAddPerson">+ Add Person</button>
+          </div>
+          <div class="people-list" id="peopleList">
+            ${peopleItems || '<div class="admin-empty" style="padding:12px;">No people added yet.</div>'}
+          </div>
         </div>
-        <div class="people-list" id="peopleList">
-          ${peopleItems || '<div class="admin-empty" style="padding:12px;">No people added yet.</div>'}
+
+        <div class="dept-section">
+          <div class="dept-section-header">
+            <h2>Meetings</h2>
+            <button class="btn btn-green" id="btnNewMeeting">+ New L10 Meeting</button>
+          </div>
+          <div class="meetings-list">
+            ${meetingItems || '<div class="admin-empty" style="padding:12px;">No meetings yet.</div>'}
+          </div>
         </div>
-        <button class="btn btn-primary btn-sm" id="btnSavePeople" style="margin-top:8px;">Save People</button>
       </div>
 
-      <!-- Meetings Section -->
-      <div class="dept-section">
-        <div class="dept-section-header">
-          <h2>Meetings</h2>
-          <button class="btn btn-primary" id="btnNewMeeting">+ New L10 Meeting</button>
-        </div>
-        <div class="meetings-list">
-          ${meetingItems || '<div class="admin-empty" style="padding:12px;">No meetings yet.</div>'}
-        </div>
+      <div class="dept-right dept-readonly${meetings.length === 0 ? ' dept-no-meetings' : ''}">
+        <div class="dept-readonly-label">${meetings.length > 0 ? `Scorecard and OKRs from most recent meeting (${meetings[0].date})` : 'Scorecard and OKRs from most recent meeting — no meetings yet'}</div>
+        ${buildScorecardContent()}
+        ${buildOkrsContent()}
       </div>
     </div>
-    <div class="toast"></div>
   `;
 
-  // Wire events
-  document.getElementById('btnBack')?.addEventListener('click', () => {
-    location.hash = '#/';
-  });
+  // Populate scorecard/OKR rows from last meeting, or empty defaults
+  const scCount = scorecardRows.length || 3;
+  for (let i = 0; i < scCount; i++) addScorecardFullRow();
 
+  const okCount = okrRows.length || 3;
+  for (let i = 1; i <= okCount; i++) addOkrFullRow('', i);
+  buildKeyResultBlocks();
+
+  // Load data from last meeting into the tables
+  if (lastMeetingData) {
+    // Scorecard
+    if (scorecardRows.length > 0) {
+      const trs = document.querySelectorAll('#scorecardFullTable tbody tr');
+      scorecardRows.forEach((cells, ri) => {
+        if (ri >= trs.length) return;
+        const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+        cells.forEach((v, ci) => { if (ci < els.length) els[ci].value = v; });
+      });
+    }
+
+    // OKR table
+    if (okrRows.length > 0) {
+      const trs = document.querySelectorAll('#okrFullTable tbody tr');
+      okrRows.forEach((cells, ri) => {
+        if (ri >= trs.length) return;
+        const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+        cells.forEach((v, ci) => {
+          if (ci < els.length) {
+            els[ci].value = v;
+            if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
+          }
+        });
+      });
+    }
+
+    // OKR meta
+    const okrMeta = lastMeetingData.okrMeta as Record<string, string> | undefined;
+    if (okrMeta) {
+      const map: Record<string, string> = {
+        quarter: 'okrQuarter', year: 'okrYear',
+        startDate: 'okrStartDate', targetDate: 'okrTargetDate',
+      };
+      for (const [key, id] of Object.entries(map)) {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+        if (el && okrMeta[key]) el.value = okrMeta[key];
+      }
+    }
+
+    // Key results
+    const keyResults = lastMeetingData.keyResults as string[][][] | undefined;
+    if (keyResults) {
+      keyResults.forEach((rows, ki) => {
+        const trs = document.querySelectorAll(`#keyResults-${ki + 1} tbody tr`);
+        rows.forEach((cells, ri) => {
+          if (ri >= trs.length) return;
+          const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+          cells.forEach((v, ci) => {
+            if (ci < els.length) {
+              els[ci].value = v;
+              if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
+            }
+          });
+        });
+      });
+    }
+  }
+
+  // Make dept-right read-only: disable all inputs/selects and hide add/delete buttons
+  const deptRight = document.querySelector('.dept-right');
+  if (deptRight) {
+    deptRight.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(el => {
+      el.disabled = true;
+    });
+    deptRight.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
+
+  wireContentEvents(deptName);
+}
+
+function wireContentEvents(deptName: string): void {
   // Add person
   document.getElementById('btnAddPerson')?.addEventListener('click', () => {
     const list = document.getElementById('peopleList')!;
-    // Remove empty message if present
     const emptyMsg = list.querySelector('.admin-empty');
     if (emptyMsg) emptyMsg.remove();
 
@@ -160,14 +302,14 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
     const idx = list.querySelectorAll('.people-item').length;
     div.dataset.index = String(idx);
     div.innerHTML = `
-      <input class="people-input" value="" placeholder="Name" autofocus>
+      <input class="people-input" value="" placeholder="Name">
       <button class="people-remove" data-index="${idx}">&times;</button>
     `;
     list.appendChild(div);
     div.querySelector('input')?.focus();
-
     div.querySelector('.people-remove')?.addEventListener('click', () => {
       div.remove();
+      savePeopleDebounced(deptName);
     });
   });
 
@@ -175,44 +317,24 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
   document.querySelectorAll('.people-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       (btn as HTMLElement).closest('.people-item')?.remove();
+      savePeopleDebounced(deptName);
     });
   });
 
-  // Save people
-  document.getElementById('btnSavePeople')?.addEventListener('click', async () => {
-    const inputs = document.querySelectorAll<HTMLInputElement>('#peopleList .people-input');
-    const names = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
-    try {
-      await fetch(`/api/departments/${encodeURIComponent(deptName)}/people`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ people: names }),
-      });
-      showToastSimple('People saved!');
-    } catch {
-      showToastSimple('Error saving people');
-    }
-  });
+  // Auto-save people on input changes
+  const peopleList = document.getElementById('peopleList');
+  if (peopleList) {
+    peopleList.addEventListener('input', () => savePeopleDebounced(deptName));
+  }
 
   // New meeting
-  document.getElementById('btnNewMeeting')?.addEventListener('click', async () => {
-    try {
-      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const { id } = await res.json();
-      location.hash = `#/dept/${encodeURIComponent(deptName)}/meeting/${id}`;
-    } catch {
-      alert('Failed to create meeting');
-    }
+  document.getElementById('btnNewMeeting')?.addEventListener('click', () => {
+    location.hash = `#/dept/${encodeURIComponent(deptName)}/meeting/new`;
   });
 
   // Meeting item clicks
   document.querySelectorAll<HTMLElement>('.meeting-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      // Don't navigate if clicking delete button
       if ((e.target as HTMLElement).closest('.meeting-item-delete')) return;
       location.hash = `#/dept/${encodeURIComponent(deptName)}/meeting/${item.dataset.id}`;
     });
@@ -225,10 +347,14 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
       const id = (btn as HTMLElement).dataset.id!;
       if (!confirm(`Delete meeting ${id}?`)) return;
       try {
-        await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${id}`, {
-          method: 'DELETE',
-        });
-        renderDepartmentView(deptName); // refresh
+        await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${id}`, { method: 'DELETE' });
+        loadDepartmentContent(deptName);
+        // Refresh sidebar count
+        const sidebarItem = document.querySelector<HTMLElement>(`.sidebar-item[data-dept="${deptName}"] .sidebar-meta`);
+        if (sidebarItem) {
+          const count = parseInt(sidebarItem.textContent || '0');
+          sidebarItem.textContent = String(Math.max(0, count - 1));
+        }
       } catch {
         alert('Failed to delete meeting');
       }
@@ -250,7 +376,7 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
         alert(err.error || 'Failed to rename');
         return;
       }
-      location.hash = `#/dept/${encodeURIComponent(newName.trim())}`;
+      await renderAdminPortal(newName.trim());
     } catch {
       alert('Failed to rename department');
     }
@@ -261,17 +387,16 @@ export async function renderDepartmentView(deptName: string): Promise<void> {
     if (!confirm(`Delete department "${deptName}" and ALL its meetings? This cannot be undone.`)) return;
     try {
       await fetch(`/api/departments/${encodeURIComponent(deptName)}`, { method: 'DELETE' });
+      _selectedDept = null;
       location.hash = '#/';
+      await renderAdminPortal();
     } catch {
       alert('Failed to delete department');
     }
   });
 }
 
-function showToastSimple(msg: string): void {
-  const t = document.querySelector<HTMLElement>('.toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+// Keep renderDepartmentView for the router -- it just calls renderAdminPortal with selection
+export async function renderDepartmentView(deptName: string): Promise<void> {
+  await renderAdminPortal(deptName);
 }

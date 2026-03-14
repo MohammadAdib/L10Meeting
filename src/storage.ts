@@ -22,14 +22,14 @@ export function gatherMeetingData(): Record<string, unknown> {
       professional: (document.getElementById('segueProfessional') as HTMLTextAreaElement)?.value ?? '',
     },
     okrMeta: {
-      quarter: val('okrQuarter'),
-      year: val('okrYear'),
-      startDate: val('okrStartDate'),
-      targetDate: val('okrTargetDate'),
+      quarter: (document.getElementById('okrQuarter') as HTMLSelectElement)?.value ?? '',
+      year: (document.getElementById('okrYear') as HTMLSelectElement)?.value ?? '',
+      startDate: (document.getElementById('okrStartDate') as HTMLInputElement)?.value ?? '',
+      targetDate: (document.getElementById('okrTargetDate') as HTMLInputElement)?.value ?? '',
     },
   };
 
-  // Gather all table data
+  // Gather all table data (including scorecard/OKR full tabs)
   const tableIds = [
     'scorecardTable', 'okrReviewTable', 'headlinesTable', 'todoReviewTable',
     'issuesListTable', 'newTodoTable', 'cascadingTable', 'ratingTable',
@@ -47,6 +47,13 @@ export function gatherMeetingData(): Record<string, unknown> {
     idsBlocks.push({ fields, todos: getTableRows(`idsTodo-${i + 1}`) });
   });
   data.idsBlocks = idsBlocks;
+
+  // Key result blocks
+  const keyResults: string[][][] = [];
+  document.querySelectorAll<HTMLTableElement>('[id^="keyResults-"]').forEach(table => {
+    keyResults.push(getTableRows(table.id));
+  });
+  data.keyResults = keyResults;
 
   // Rating values (hidden inputs)
   const ratingValues: string[] = [];
@@ -125,6 +132,24 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     });
   }
 
+  // Key results
+  const keyResults = data.keyResults as string[][][] | undefined;
+  if (keyResults) {
+    keyResults.forEach((rows, ki) => {
+      const trs = document.querySelectorAll(`#keyResults-${ki + 1} tbody tr`);
+      rows.forEach((cells, ri) => {
+        if (ri >= trs.length) return;
+        const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+        cells.forEach((v, ci) => {
+          if (ci < els.length) {
+            els[ci].value = v;
+            if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
+          }
+        });
+      });
+    });
+  }
+
   // Rating values
   const ratingValues = data.ratingValues as string[] | undefined;
   if (ratingValues) {
@@ -140,16 +165,31 @@ export function loadMeetingData(data: Record<string, unknown>): void {
 let _autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 let _autoSaveDept: string = '';
 let _autoSaveMeetingId: string = '';
+let _meetingDirty = false;
+let _meetingStarted = false;
+let _isNewMeeting = false;
 
-export function setupAutoSave(dept: string, meetingId: string): void {
+export function markMeetingStarted(): void {
+  _meetingStarted = true;
+  _meetingDirty = true;
+}
+
+export function isMeetingActive(): boolean {
+  return _meetingStarted || _meetingDirty;
+}
+
+export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = false): void {
   _autoSaveDept = dept;
   _autoSaveMeetingId = meetingId;
+  _meetingDirty = false;
+  _meetingStarted = false;
+  _isNewMeeting = isNew;
 
-  // Listen for any input changes within the meeting view
   const container = document.getElementById('app');
   if (!container) return;
 
   const trigger = () => {
+    _meetingDirty = true;
     if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
     updateAutoSaveStatus('Unsaved changes...');
     _autoSaveTimer = setTimeout(() => doAutoSave(), 3000);
@@ -159,18 +199,43 @@ export function setupAutoSave(dept: string, meetingId: string): void {
   container.addEventListener('change', trigger);
 }
 
+export function cleanupAutoSave(): void {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveDept = '';
+  _autoSaveMeetingId = '';
+  _meetingDirty = false;
+  _meetingStarted = false;
+  _isNewMeeting = false;
+}
+
 async function doAutoSave(): Promise<void> {
-  if (!_autoSaveDept || !_autoSaveMeetingId) return;
+  if (!_autoSaveDept) return;
+  if (!_meetingStarted && !_meetingDirty) return;
   updateAutoSaveStatus('Saving...');
   try {
     const data = gatherMeetingData();
     data.lastSaved = new Date().toISOString();
-    const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings/${_autoSaveMeetingId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Save failed');
+
+    // Create on server if this is a new meeting
+    if (_isNewMeeting && !_autoSaveMeetingId) {
+      const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Create failed');
+      const result = await res.json();
+      _autoSaveMeetingId = result.id;
+      _isNewMeeting = false;
+      history.replaceState(null, '', `#/dept/${encodeURIComponent(_autoSaveDept)}/meeting/${_autoSaveMeetingId}`);
+    } else {
+      const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings/${_autoSaveMeetingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Save failed');
+    }
     updateAutoSaveStatus('Saved');
   } catch {
     updateAutoSaveStatus('Save failed');

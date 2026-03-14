@@ -10,7 +10,7 @@ const dataDir = path.join(exeDir, 'data');
 
 // Ensure data directory exists
 fs.mkdirSync(dataDir, { recursive: true });
-fs.mkdirSync(path.join(dataDir, 'departments'), { recursive: true });
+fs.mkdirSync(path.join(dataDir, 'Departments'), { recursive: true });
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -21,7 +21,7 @@ app.use(express.static(staticDir));
 // Helper: get department directory path (with validation)
 function deptDir(name: string): string {
   const dir = path.join(dataDir, 'departments', name);
-  if (!dir.startsWith(path.join(dataDir, 'departments'))) throw new Error('Forbidden');
+  if (!dir.startsWith(path.join(dataDir, 'Departments'))) throw new Error('Forbidden');
   return dir;
 }
 
@@ -30,17 +30,18 @@ function deptDir(name: string): string {
 // List departments
 app.get('/api/departments', (_req, res) => {
   try {
-    const depsDir = path.join(dataDir, 'departments');
+    const depsDir = path.join(dataDir, 'Departments');
     if (!fs.existsSync(depsDir)) { res.json([]); return; }
     const dirs = fs.readdirSync(depsDir, { withFileTypes: true })
       .filter(d => d.isDirectory())
       .map(d => {
-        const meetingsDir = path.join(depsDir, d.name, 'meetings');
-        let meetingCount = 0;
-        if (fs.existsSync(meetingsDir)) {
-          meetingCount = fs.readdirSync(meetingsDir).filter(f => f.endsWith('.json')).length;
+        const peoplePath = path.join(depsDir, d.name, 'people.txt');
+        let peopleCount = 0;
+        if (fs.existsSync(peoplePath)) {
+          const content = fs.readFileSync(peoplePath, 'utf-8').trim();
+          peopleCount = content ? content.split('\n').filter(Boolean).length : 0;
         }
-        return { name: d.name, meetingCount };
+        return { name: d.name, peopleCount };
       });
     res.json(dirs);
   } catch {
@@ -116,6 +117,60 @@ app.put('/api/departments/:name/people', (req, res) => {
     if (!Array.isArray(people)) { res.status(400).json({ error: 'people array required' }); return; }
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'people.txt'), people.join('\n'), 'utf-8');
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Scorecard APIs ──
+
+// Get scorecard
+app.get('/api/departments/:name/scorecard', (req, res) => {
+  try {
+    const dir = deptDir(req.params.name);
+    const filePath = path.join(dir, 'scorecard.json');
+    if (!fs.existsSync(filePath)) { res.json({ rows: [] }); return; }
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    res.json(data);
+  } catch {
+    res.json({ rows: [] });
+  }
+});
+
+// Save scorecard
+app.put('/api/departments/:name/scorecard', (req, res) => {
+  try {
+    const dir = deptDir(req.params.name);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'scorecard.json'), JSON.stringify(req.body, null, 2), 'utf-8');
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── OKR APIs ──
+
+// Get OKRs
+app.get('/api/departments/:name/okrs', (req, res) => {
+  try {
+    const dir = deptDir(req.params.name);
+    const filePath = path.join(dir, 'okrs.json');
+    if (!fs.existsSync(filePath)) { res.json({ meta: {}, rows: [] }); return; }
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    res.json(data);
+  } catch {
+    res.json({ meta: {}, rows: [] });
+  }
+});
+
+// Save OKRs
+app.put('/api/departments/:name/okrs', (req, res) => {
+  try {
+    const dir = deptDir(req.params.name);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'okrs.json'), JSON.stringify(req.body, null, 2), 'utf-8');
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

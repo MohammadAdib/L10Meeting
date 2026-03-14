@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange } from './utils';
-import { resetAll, loadMeetingData, setupAutoSave } from './storage';
+import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, isMeetingActive, cleanupAutoSave } from './storage';
 import { exportExcel } from './export';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
@@ -33,11 +33,26 @@ window.__addIDSTodoRow = addIDSTodoRow;
 window.__addKeyResultRow = addKeyResultRow;
 
 // ── Router ──
+let _previousHash = '';
+
 async function route() {
   const hash = location.hash || '#/';
+  const leavingMeeting = _previousHash.includes('/meeting/') && !hash.includes('/meeting/');
 
-  // Clean up timers from any previous meeting view
+  // Confirm before leaving an active meeting
+  if (leavingMeeting && isMeetingActive()) {
+    if (!confirm('You have an active meeting. Are you sure you want to leave?')) {
+      // Restore the previous hash without triggering another route
+      history.pushState(null, '', _previousHash);
+      return;
+    }
+  }
+
+  _previousHash = hash;
+
+  // Clean up from any previous meeting view
   cleanupTimers();
+  cleanupAutoSave();
 
   const meetingMatch = hash.match(/#\/dept\/([^/]+)\/meeting\/(.+)/);
   const deptMatch = hash.match(/#\/dept\/([^/]+)$/);
@@ -88,6 +103,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   }
 
   function startMeeting() {
+    markMeetingStarted();
     meetingTab.classList.remove('blurred');
     sidebar.classList.remove('blurred');
     const actions = document.getElementById('topBarActions')!;
@@ -173,28 +189,14 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   }
 
   // ── Set up auto-save ──
-  // For new meetings, we need to create it first to get an ID
-  let actualMeetingId = meetingId;
-  if (meetingId === 'new') {
-    try {
-      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const result = await res.json();
-      actualMeetingId = result.id;
-      // Update the URL without triggering a route change
-      history.replaceState(null, '', `#/dept/${encodeURIComponent(deptName)}/meeting/${actualMeetingId}`);
-    } catch { /* fallback */ }
-  }
-  setupAutoSave(deptName, actualMeetingId);
+  // For new meetings, defer creating on server until first save
+  setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new');
 
   // ── Event Delegation ──
 
-  // Back button
-  document.getElementById('btnBackToDept')?.addEventListener('click', () => {
-    location.hash = `#/dept/${encodeURIComponent(deptName)}`;
+  // Logo click → back to landing page
+  document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
+    location.hash = '#/';
   });
 
   // Tab switching

@@ -16,7 +16,7 @@ function sectionCard(num: number, title: string, timeLabel: string, bodyId: stri
   </div>`;
 }
 
-function tableHTML(id: string, headers: string[]): string {
+export function tableHTML(id: string, headers: string[]): string {
   const ths = headers.map(h => {
     if (h.startsWith('w:')) {
       const [, w, label] = h.match(/w:(\d+):(.*)/)!;
@@ -27,6 +27,41 @@ function tableHTML(id: string, headers: string[]): string {
   return `<table class="data-table" id="${id}"><thead><tr>${ths}</tr></thead><tbody></tbody></table>`;
 }
 
+/** Reusable Scorecard section HTML (used in both meeting tab and dept view) */
+export function buildScorecardContent(): string {
+  return `
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>SCORECARD TRACKER (Rolling 13 Weeks)</h2></div>
+      <div class="section-body">
+        <p class="section-desc">Track weekly actuals below. Use color-coded status to flag off-track items.</p>
+        <div style="overflow-x:auto;">
+        ${tableHTML('scorecardFullTable', ['Measurable / KPI', 'Owner', 'Goal', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5', 'Wk 6', 'Wk 7', 'Wk 8', 'Wk 9', 'Wk 10', 'Wk 11', 'Wk 12', 'Wk 13', 'w:30:'])}
+        </div>
+        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecardFull">+ Add Measurable</button>
+      </div>
+    </div>`;
+}
+
+/** Reusable OKR section HTML (used in both meeting tab and dept view) */
+export function buildOkrsContent(): string {
+  return `
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
+      <div class="section-body">
+        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
+          <div class="meta-field"><label>Quarter</label><select id="okrQuarter">${[1,2,3,4].map(q => `<option${q === Math.ceil((new Date().getMonth()+1)/3) ? ' selected' : ''}>Q${q}</option>`).join('')}</select></div>
+          <div class="meta-field"><label>Year</label><select id="okrYear">${Array.from({length: 7}, (_, i) => { const y = new Date().getFullYear() - 2 + i; return `<option${y === new Date().getFullYear() ? ' selected' : ''}>${y}</option>`; }).join('')}</select></div>
+          <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
+          <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
+        </div>
+        <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
+        ${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}
+        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
+        <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
+      </div>
+    </div>`;
+}
+
 export function buildAppHTML(deptName?: string): string {
   const sidebarItems = SECTIONS.map((s, i) =>
     `<a class="sidebar-item${i === 0 ? ' active' : ''}" data-nav="${s.num}" href="#sec-${s.num}">
@@ -35,15 +70,10 @@ export function buildAppHTML(deptName?: string): string {
     </a>`
   ).join('');
 
-  const backBtn = deptName
-    ? `<button class="back-btn" id="btnBackToDept" title="Back to ${deptName}">&#8592;</button>`
-    : '';
-
   return `
 <div class="top-bar-wrapper">
   <div class="top-bar">
     <div class="top-bar-left">
-      ${backBtn}
       <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
       <div class="top-bar-tabs">
         <button class="top-tab active" data-tab="meeting">L10 Meeting</button>
@@ -150,35 +180,12 @@ export function buildAppHTML(deptName?: string): string {
 
   <!-- SCORECARD TAB -->
   <div id="tab-scorecard" class="tab-content">
-    <div class="section-card">
-      <div class="section-header" style="cursor:default"><h2>SCORECARD TRACKER (Rolling 13 Weeks)</h2></div>
-      <div class="section-body">
-        <p class="section-desc">Track weekly actuals below. Use color-coded status to flag off-track items.</p>
-        <div style="overflow-x:auto;">
-        ${tableHTML('scorecardFullTable', ['Measurable / KPI', 'Owner', 'Goal', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5', 'Wk 6', 'Wk 7', 'Wk 8', 'Wk 9', 'Wk 10', 'Wk 11', 'Wk 12', 'Wk 13', 'w:30:'])}
-        </div>
-        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecardFull">+ Add Measurable</button>
-      </div>
-    </div>
+    ${buildScorecardContent()}
   </div>
 
   <!-- OKR TAB -->
   <div id="tab-okrs" class="tab-content">
-    <div class="section-card">
-      <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
-      <div class="section-body">
-        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
-          <div class="meta-field"><label>Quarter</label><select id="okrQuarter">${[1,2,3,4].map(q => `<option${q === Math.ceil((new Date().getMonth()+1)/3) ? ' selected' : ''}>Q${q}</option>`).join('')}</select></div>
-          <div class="meta-field"><label>Year</label><select id="okrYear">${Array.from({length: 7}, (_, i) => { const y = new Date().getFullYear() - 2 + i; return `<option${y === new Date().getFullYear() ? ' selected' : ''}>${y}</option>`; }).join('')}</select></div>
-          <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
-          <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
-        </div>
-        <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
-        ${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}
-        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
-        <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
-      </div>
-    </div>
+    ${buildOkrsContent()}
     </div>
   </div>
   </div><!-- end main-content -->
