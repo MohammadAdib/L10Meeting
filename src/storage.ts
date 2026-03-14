@@ -1,5 +1,10 @@
 import { showToast, getTableRows, val, onStatusChange } from './utils';
-import { updateTodoCompletion, updateAvgRating } from './tables';
+import {
+  updateTodoCompletion, updateAvgRating,
+  addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
+  addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
+  addRatingRow,
+} from './tables';
 
 export function resetAll(): void {
   if (!confirm('Reset all fields? This cannot be undone.')) return;
@@ -99,7 +104,17 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     }
   }
 
-  // Restore tables
+  // Restore tables — add extra rows if data has more than pre-created
+  const tableAdders: Record<string, () => void> = {
+    scorecardTable: addScorecardRow,
+    okrReviewTable: addOkrReviewRow,
+    headlinesTable: addHeadlineRow,
+    todoReviewTable: addTodoReviewRow,
+    issuesListTable: addIssueRow,
+    newTodoTable: addNewTodoRow,
+    cascadingTable: addCascadingRow,
+    ratingTable: addRatingRow,
+  };
   const tableIds = [
     'scorecardTable', 'okrReviewTable', 'headlinesTable', 'todoReviewTable',
     'issuesListTable', 'newTodoTable', 'cascadingTable', 'ratingTable',
@@ -108,6 +123,12 @@ export function loadMeetingData(data: Record<string, unknown>): void {
   for (const tableId of tableIds) {
     const rows = data[tableId] as string[][] | undefined;
     if (!rows) continue;
+    // Add extra rows if needed
+    const adder = tableAdders[tableId];
+    if (adder) {
+      const existing = document.querySelectorAll(`#${tableId} tbody tr`).length;
+      for (let i = existing; i < rows.length; i++) adder();
+    }
     const trs = document.querySelectorAll(`#${tableId} tbody tr`);
     rows.forEach((cells, ri) => {
       if (ri >= trs.length) return;
@@ -121,14 +142,36 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     });
   }
 
-  // IDS blocks
+  // IDS blocks — add extra blocks if needed, then populate fields and todos
   const idsBlocks = data.idsBlocks as { fields: string[]; todos: string[][] }[] | undefined;
   if (idsBlocks) {
+    const existingBlocks = document.querySelectorAll('#idsIssuesContainer .ids-issue').length;
+    for (let i = existingBlocks; i < idsBlocks.length; i++) addIDSIssue();
+
     const blocks = document.querySelectorAll('#idsIssuesContainer .ids-issue');
     idsBlocks.forEach((block, bi) => {
       if (bi >= blocks.length) return;
       const tas = blocks[bi].querySelectorAll<HTMLTextAreaElement>('.ids-field textarea');
       block.fields.forEach((v, fi) => { if (fi < tas.length) tas[fi].value = v; });
+
+      // Populate todos within this IDS block
+      const todos = block.todos;
+      if (todos && todos.length > 0) {
+        const issueN = bi + 1;
+        const existingTodos = document.querySelectorAll(`#idsTodo-${issueN} tbody tr`).length;
+        for (let i = existingTodos; i < todos.length; i++) addIDSTodoRow(issueN);
+        const todoTrs = document.querySelectorAll(`#idsTodo-${issueN} tbody tr`);
+        todos.forEach((cells, ri) => {
+          if (ri >= todoTrs.length) return;
+          const els = todoTrs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+          cells.forEach((v, ci) => {
+            if (ci < els.length) {
+              els[ci].value = v;
+              if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
+            }
+          });
+        });
+      }
     });
   }
 
@@ -199,6 +242,7 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
   if (!container) return;
 
   const trigger = (delay = 3000) => {
+    if (!_meetingStarted && _isNewMeeting) return;
     _meetingDirty = true;
     if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
     _autoSaveTimer = setTimeout(() => doAutoSave(), delay);
@@ -207,6 +251,16 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
   container.addEventListener('input', () => trigger(3000));
   container.addEventListener('change', () => trigger(3000));
   container.addEventListener('click', () => trigger(5000));
+}
+
+/** Disable auto-save without flushing (used before deleting a meeting) */
+export function disableAutoSave(): void {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveDept = '';
+  _autoSaveMeetingId = '';
+  _meetingDirty = false;
+  _meetingStarted = false;
+  _isNewMeeting = false;
 }
 
 export async function cleanupAutoSave(): Promise<void> {
@@ -220,6 +274,13 @@ export async function cleanupAutoSave(): Promise<void> {
   _meetingDirty = false;
   _meetingStarted = false;
   _isNewMeeting = false;
+}
+
+/** Force an immediate save */
+export async function forceSave(): Promise<void> {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _meetingDirty = true;
+  await doAutoSave();
 }
 
 async function doAutoSave(): Promise<void> {

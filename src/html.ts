@@ -85,6 +85,7 @@ export function buildAppHTML(deptName?: string): string {
       <span class="autosave-status" id="autosaveStatus"></span>
       <button class="btn btn-outline" id="btnReset">Reset</button>
       <button class="btn btn-primary" id="btnOpenExcel">Open in Excel</button>
+      <button class="btn btn-danger" id="btnDeleteMeeting" style="display:none">Delete</button>
     </div>
   </div>
   <div class="global-progress"><div class="global-progress-fill" id="globalProgress"></div></div>
@@ -136,7 +137,7 @@ export function buildAppHTML(deptName?: string): string {
 
     ${sectionCard(4, 'CUSTOMER / EMPLOYEE HEADLINES', '5:00', 'body-4', `
       <p class="section-desc">Share good or bad news about customers or employees. Drop issues into IDS.</p>
-      ${tableHTML('headlinesTable', ['Headline', 'w:100:Type', 'Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
+      ${tableHTML('headlinesTable', ['Headline', 'w:120:Type', 'w:100:Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddHeadline">+ Add Headline</button>
     `)}
 

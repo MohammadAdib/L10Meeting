@@ -17,6 +17,7 @@
   --text-dim: #94a3b8;
   --text-muted: #64748b;
   --radius: 10px;
+  color-scheme: dark;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,7 +39,7 @@ body {
 .top-bar {
   background: var(--dark);
   color: #fff;
-  padding: 0 32px 0 32px;
+  padding: 0 12px 0 32px;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
@@ -195,6 +196,8 @@ body {
 }
 .btn-primary { background: var(--accent); color: #000; }
 .btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #ef4444; }
 .btn-green { background: var(--green); color: #000; }
 .btn-green:hover { background: #2bc48a; box-shadow: 0 0 16px rgba(52,211,153,.3); }
 .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.8); }
@@ -441,6 +444,7 @@ body {
 .data-table th:first-child { border-radius: 6px 0 0 0; }
 .data-table th:last-child { border-radius: 0 6px 0 0; }
 .data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.data-table td:last-child { vertical-align: middle; }
 .data-table tr:nth-child(even) td { background: var(--surface); }
 .data-table tr:nth-child(odd) td { background: var(--surface2); }
 .data-table tr:last-child td { border-bottom: none; }
@@ -605,7 +609,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 .completion-stat .stat-label { font-size: 12px; color: var(--text-muted); }
 
 /* ── RATING STARS ── */
-.rating-stars { display: flex; gap: 2px; }
+.rating-stars { display: flex; gap: 2px; margin-top: 4px; }
 .rating-stars button {
   background: none;
   border: none;
@@ -949,10 +953,10 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 }
 .meeting-star {
   font-size: 14px;
-  color: #d0d0d0;
+  color: var(--border);
 }
 .meeting-star.active {
-  color: #f5a623;
+  color: var(--accent);
 }
 .meeting-rating-val {
   font-size: 12px;

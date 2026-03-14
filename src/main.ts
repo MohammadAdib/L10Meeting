@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange } from './utils';
-import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, openInExcel } from './storage';
+import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -33,7 +33,6 @@ window.__addKeyResultRow = addKeyResultRow;
 
 // ── Router ──
 let _previousHash = '';
-
 async function route() {
   const hash = location.hash || '#/';
   const leavingMeeting = _previousHash.includes('/meeting/') && !hash.includes('/meeting/');
@@ -98,7 +97,23 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     controlDiv.innerHTML = '';
     document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
     document.getElementById('btnReset')?.remove();
+    const btnDelete = document.getElementById('btnDeleteMeeting');
+    if (btnDelete) {
+      btnDelete.style.display = '';
+      btnDelete.addEventListener('click', async () => {
+        if (!confirm('Delete this meeting? This cannot be undone.')) return;
+        try {
+          const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${meetingId}`, { method: 'DELETE' });
+          if (res.ok) {
+            disableAutoSave();
+            location.hash = `#/dept/${encodeURIComponent(deptName)}`;
+          }
+        } catch { /* silent */ }
+      });
+    }
   } else {
+    const btnExcel = document.getElementById('btnOpenExcel');
+    if (btnExcel) btnExcel.style.display = 'none';
     // New meeting: blur until started
     meetingTab.classList.add('blurred');
     sidebar.classList.add('blurred');
@@ -148,7 +163,9 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
 
       const controlDiv = document.querySelector('.meeting-control')!;
-      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Meeting ended — ${formatElapsed(meetingSeconds)}</span>`;
+      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${formatElapsed(meetingSeconds)}</span>`;
+      if (btnExcel) btnExcel.style.display = '';
+      forceSave();
     }
 
     document.getElementById('btnMeetingStart')!.addEventListener('click', startMeeting);
@@ -203,6 +220,51 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   for (let i = 1; i <= 7; i++) addOkrFullRow('', i);
   buildKeyResultBlocks();
 
+  // ── For new meetings, carry over scorecard & OKR data from most recent meeting ──
+  if (meetingId === 'new') {
+    try {
+      const listRes = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings`);
+      if (listRes.ok) {
+        const meetings = await listRes.json();
+        if (meetings.length > 0) {
+          // Sort by date descending, pick latest
+          meetings.sort((a: any, b: any) => b.date.localeCompare(a.date));
+          const lastId = meetings[0].id;
+          const lastRes = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${lastId}`);
+          if (lastRes.ok) {
+            const lastData = await lastRes.json();
+            // Carry over scorecard rows
+            const scRows = lastData.scorecardTable as string[][] | undefined;
+            if (scRows) {
+              const trs = document.querySelectorAll('#scorecardTable tbody tr');
+              scRows.forEach((cells, ri) => {
+                if (ri >= trs.length) return;
+                const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+                // Only carry over KPI name (0), owner (1), goal (2) — skip actual, status, notes
+                [0, 1, 2].forEach(ci => {
+                  if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
+                });
+              });
+            }
+            // Carry over OKR review rows
+            const okrRows = lastData.okrReviewTable as string[][] | undefined;
+            if (okrRows) {
+              const trs = document.querySelectorAll('#okrReviewTable tbody tr');
+              okrRows.forEach((cells, ri) => {
+                if (ri >= trs.length) return;
+                const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+                // Carry over OKR description (0), owner (1), due date (2) — skip status, %, notes
+                [0, 1, 2].forEach(ci => {
+                  if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
+                });
+              });
+            }
+          }
+        }
+      }
+    } catch { /* silent */ }
+  }
+
   // ── If loading existing meeting, populate data ──
   if (meetingId !== 'new') {
     try {
@@ -210,6 +272,22 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       if (res.ok) {
         const data = await res.json();
         loadMeetingData(data);
+
+        // Show duration for existing meetings based on start/end time
+        const startVal = (document.getElementById('metaStart') as HTMLInputElement).value;
+        const endVal = (document.getElementById('metaEnd') as HTMLInputElement).value;
+        if (startVal && endVal) {
+          const [sh, sm] = startVal.split(':').map(Number);
+          const [eh, em] = endVal.split(':').map(Number);
+          const totalSecs = (eh * 3600 + em * 60) - (sh * 3600 + sm * 60);
+          if (totalSecs > 0) {
+            const h = Math.floor(totalSecs / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
+            const controlDiv = document.querySelector('.meeting-control')!;
+            controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
+          }
+        }
       } else {
         // Meeting no longer exists — go home and clear history
         location.replace('#/');

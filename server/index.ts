@@ -124,6 +124,54 @@ function writeJsonToWorkbook(ws: ExcelJS.Worksheet, data: Record<string, any>): 
     if (rv > 0) { ratingSum += rv; ratingCount++; }
   });
   ws.getCell('B198').value = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : '';
+
+  // Apply data validations (dropdowns) to match GUI options
+  const validations: { col: string; startRow: number; count: number; options: string[] }[] = [
+    // Scorecard Review: col E = Status
+    { col: 'E', startRow: 14, count: 7, options: ['On Track', 'Off Track', 'At Risk'] },
+    // OKR Review: col D = Status, col E = % (no validation needed)
+    { col: 'D', startRow: 26, count: 6, options: ['On Track', 'Off Track', 'At Risk'] },
+    // Headlines: col B = Type, col D = Action Needed?, col E = Add to IDS?
+    { col: 'B', startRow: 37, count: 6, options: ['Customer', 'Employee'] },
+    { col: 'D', startRow: 37, count: 6, options: ['Yes', 'No'] },
+    { col: 'E', startRow: 37, count: 6, options: ['Yes', 'No'] },
+    // To-Do Review: col D = Status, col E = Add to IDS?
+    { col: 'D', startRow: 47, count: 7, options: ['Open', 'Done', 'Carry Over'] },
+    { col: 'E', startRow: 47, count: 7, options: ['Yes', 'No'] },
+    // Issues List: col C = Priority, col D = Status, col F = Next Mtg?
+    { col: 'C', startRow: 60, count: 16, options: ['High', 'Medium', 'Low'] },
+    { col: 'D', startRow: 60, count: 16, options: ['Open', 'Solved', 'Next Meeting', 'Dropped'] },
+    { col: 'F', startRow: 60, count: 16, options: ['Yes', 'No'] },
+    // New To-Dos: col D = Priority, col E = Status
+    { col: 'D', startRow: 171, count: 11, options: ['High', 'Medium', 'Low'] },
+    { col: 'E', startRow: 171, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
+    // Cascading Messages: col F = Done?
+    { col: 'F', startRow: 184, count: 6, options: ['Yes', 'No'] },
+  ];
+  for (const v of validations) {
+    for (let i = 0; i < v.count; i++) {
+      ws.getCell(`${v.col}${v.startRow + i}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`"${v.options.join(',')}"`],
+      };
+    }
+  }
+
+  // IDS block todo validations: col D = Priority, col E = Status
+  for (let bi = 0; bi < issueStarts.length; bi++) {
+    const base = issueStarts[bi];
+    for (let i = 0; i < 5; i++) {
+      ws.getCell(`D${base + 4 + i}`).dataValidation = {
+        type: 'list', allowBlank: true,
+        formulae: ['"High,Medium,Low"'],
+      };
+      ws.getCell(`E${base + 4 + i}`).dataValidation = {
+        type: 'list', allowBlank: true,
+        formulae: ['"Not Started,In Progress,Done"'],
+      };
+    }
+  }
 }
 
 function writeTable(ws: ExcelJS.Worksheet, rows: string[][] | undefined, startRow: number, maxRows: number, cols: string[]): void {
@@ -137,6 +185,11 @@ function writeTable(ws: ExcelJS.Worksheet, rows: string[][] | undefined, startRo
   });
 }
 
+/** Strip emoji characters from a string */
+function stripEmoji(s: string): string {
+  return s.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F900}-\u{1F9FF}]|[\u{200D}]|[\u{20E3}]|[\u{E0020}-\u{E007F}]/gu, '').trim();
+}
+
 /** Extract a cell value as a plain string, handling formulas and dates */
 function cellStr(ws: ExcelJS.Worksheet, ref: string): string {
   const v = ws.getCell(ref).value;
@@ -146,11 +199,11 @@ function cellStr(ws: ExcelJS.Worksheet, ref: string): string {
     const r = (v as any).result;
     if (r === null || r === undefined) return '';
     if (r instanceof Date) return formatDateCell(r);
-    return String(r);
+    return stripEmoji(String(r));
   }
   // Date objects
   if (v instanceof Date) return formatDateCell(v);
-  return String(v);
+  return stripEmoji(String(v));
 }
 
 function formatDateCell(d: Date): string {
