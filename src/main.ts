@@ -487,16 +487,21 @@ function initStandaloneMeeting(): void {
     people: [],
   });
 
-  // Hash navigation for browser back
-  history.pushState(null, '', '#/onetime');
-  const onHash = () => {
-    if (location.hash !== '#/onetime') {
-      window.removeEventListener('hashchange', onHash);
-      cleanup();
-      fs.hasStoredFolder().then(stored => showFolderPicker(stored === 'prompt'));
-    }
+  // Navigation for browser back
+  history.pushState({ onetime: true }, '', '#/onetime');
+  const goBack = () => {
+    window.removeEventListener('popstate', onPop);
+    window.removeEventListener('hashchange', onHashFallback);
+    cleanup();
+    history.replaceState(null, '', location.pathname);
+    fs.hasStoredFolder().then(stored => showFolderPicker(stored === 'prompt'));
   };
-  window.addEventListener('hashchange', onHash);
+  const onPop = () => goBack();
+  const onHashFallback = () => {
+    if (location.hash !== '#/onetime') goBack();
+  };
+  window.addEventListener('popstate', onPop);
+  window.addEventListener('hashchange', onHashFallback);
 
   // Export Excel
   document.getElementById('btnExportExcel')?.addEventListener('click', async () => {
