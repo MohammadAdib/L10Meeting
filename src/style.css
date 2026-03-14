@@ -1,21 +1,21 @@
 :root {
-  --bg: #f9f5f0;
-  --surface: #ffffff;
-  --surface2: #fff0e5;
-  --border: #e8ddd3;
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232733;
+  --border: #2e3345;
   --accent: #ff8c42;
-  --accent-hover: #e07a35;
-  --accent-light: #ffd0a8;
-  --accent-bg: #fff0e5;
-  --dark: #1a1a1a;
-  --green: #2e7d32;
-  --green-bg: #e8f5e9;
-  --red: #c62828;
-  --red-bg: #ffebee;
-  --orange: #ef6c00;
-  --text: #1a1a1a;
-  --text-dim: #5a5a5a;
-  --text-muted: #8a8a8a;
+  --accent-hover: #ffa566;
+  --accent-light: rgba(255,140,66,.15);
+  --accent-bg: rgba(255,140,66,.08);
+  --dark: #13151d;
+  --green: #34d399;
+  --green-bg: rgba(52,211,153,.1);
+  --red: #f87171;
+  --red-bg: rgba(248,113,113,.1);
+  --orange: #fbbf24;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-muted: #64748b;
   --radius: 10px;
 }
 
@@ -60,7 +60,7 @@ body {
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.8); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-.btn-outline-dark { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+.btn-outline-dark { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
 .btn-outline-dark:hover { border-color: var(--accent); color: var(--accent); }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
 
@@ -153,7 +153,7 @@ body {
   overflow: hidden;
   transition: box-shadow .2s;
 }
-.section-card:hover { box-shadow: 0 2px 16px rgba(0,0,0,.06); }
+.section-card:hover { box-shadow: 0 2px 20px rgba(0,0,0,.3); }
 .section-header {
   display: flex;
   align-items: center;
@@ -234,7 +234,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .8px;
-  color: #000;
+  color: #fff;
   background: var(--accent);
   white-space: nowrap;
 }
@@ -242,7 +242,7 @@ body {
 .data-table th:last-child { border-radius: 0 6px 0 0; }
 .data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .data-table tr:nth-child(even) td { background: var(--accent-bg); }
-.data-table tr:nth-child(odd) td { background: #fff; }
+.data-table tr:nth-child(odd) td { background: var(--surface2); }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table input,
 .data-table select,
@@ -261,11 +261,11 @@ body {
 }
 .data-table input:focus,
 .data-table select:focus,
-.data-table textarea:focus { border-color: var(--accent); background: #fff; }
+.data-table textarea:focus { border-color: var(--accent); background: var(--surface2); }
 .data-table select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8a8a'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
   padding-right: 24px;
@@ -308,7 +308,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 }
 .segue-box textarea {
   width: 100%;
-  background: #fff;
+  background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 8px 12px;
@@ -370,7 +370,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 .ids-field input,
 .ids-field textarea {
   width: 100%;
-  background: #fff;
+  background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 8px 12px;

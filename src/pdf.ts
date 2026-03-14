@@ -22,7 +22,7 @@ export async function exportPDF(): Promise<void> {
     margin: [10, 10, 10, 10] as [number, number, number, number],
     filename,
     image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f9f5f0' },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f1117' },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
   };

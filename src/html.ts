@@ -18,7 +18,7 @@ function sectionCard(num: number, title: string, timeLabel: string, bodyId: stri
 function tableHTML(id: string, headers: string[]): string {
   const ths = headers.map(h => {
     if (h.startsWith('w:')) {
-      const [, w, label] = h.match(/w:(\d+):(.+)/)!;
+      const [, w, label] = h.match(/w:(\d+):(.*)/)!;
       return `<th style="width:${w}px">${label}</th>`;
     }
     return `<th>${h}</th>`;

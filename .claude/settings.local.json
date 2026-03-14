@@ -11,7 +11,9 @@
       "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && cp -r l10app/* . && cp l10app/.gitignore . 2>/dev/null; cp l10app/tsconfig.json . 2>/dev/null; rm -rf l10app)",
       "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install 2>&1 | tail -3)",
       "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install html2pdf.js 2>&1 | tail -3)",
-      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run build 2>&1)"
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run build 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run dev 2>&1 | head -15)",
+      "Bash(sleep 3 && curl -s http://localhost:5173/ 2>/dev/null | head -20)"
     ]
   }
 }
