@@ -122,7 +122,7 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
 }
 
 function buildRatingHtml(avg: number): string {
-  if (avg <= 0) return '<span class="meeting-rating-val" style="color:var(--text-muted)">—</span>';
+  if (avg <= 0) return '<span class="meeting-rating-val" style="color:var(--text-muted)">No Rating</span>';
   const fullStars = Math.round(avg);
   return Array.from({ length: 10 }, (_, i) =>
     `<span class="meeting-star${i < fullStars ? ' active' : ''}">\u2605</span>`
@@ -229,6 +229,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
       dr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(el => {
         el.disabled = true;
       });
+      dr.querySelectorAll<HTMLElement>('.person-picker').forEach(el => el.classList.add('disabled'));
       dr.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
         el.style.display = 'none';
       });
@@ -264,6 +265,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
         dr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach(el => {
           el.disabled = true;
         });
+        dr.querySelectorAll<HTMLElement>('.person-picker').forEach(el => el.classList.add('disabled'));
         dr.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
           el.style.display = 'none';
         });

@@ -67,7 +67,9 @@
       "Bash(git stash:*)",
       "Bash(grep -r \"L10_Meeting_Template\" /c/Users/MohammadAdib/Documents/GitHub/CompanyTools --include=\"*.ts\" --include=\"*.js\" --include=\"*.json\" 2>/dev/null | grep -v node_modules)",
       "Bash(find /c/Users/MohammadAdib/Documents/GitHub/CompanyTools -maxdepth 1 -type f -name \"*.md\" -o -name \"*.txt\" -o -name \".env*\" 2>/dev/null | head -20)",
-      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && rm -rf server/ server-dist/ && rm -f tsconfig.server.json src/template.xlsx)"
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && rm -rf server/ server-dist/ && rm -f tsconfig.server.json src/template.xlsx)",
+      "Bash(npm run:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

@@ -710,6 +710,112 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 
+/* ── PERSON PICKER ── */
+.person-picker { position: relative; min-width: 100px; display: flex; align-items: center; }
+td:has(.person-picker) { vertical-align: middle; }
+.person-picker-btn {
+  flex: 1;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  min-height: 32px;
+  transition: border .15s;
+}
+.person-picker-btn:focus { border-color: var(--accent); background: var(--surface2); }
+.person-picker:not(.has-value):not(.disabled) .person-picker-btn { background: var(--surface2); border-color: var(--border); }
+.person-picker-btn:hover { border-color: var(--border); }
+.person-picker-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: none;
+}
+.person-picker-clear:hover { color: var(--text); }
+.person-picker.has-value .person-picker-clear { display: block; }
+/* Read-only / disabled state */
+.person-picker.disabled .person-picker-btn {
+  background: transparent;
+  border: none;
+  cursor: default;
+  padding: 2px 0;
+  color: var(--text);
+}
+.person-picker.disabled .person-picker-btn:hover { border-color: transparent; }
+.person-picker.disabled .person-picker-clear { display: none !important; }
+.person-picker-dropdown {
+  z-index: 9999;
+  background: var(--dark);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  min-width: 180px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.pp-custom-row {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+}
+.pp-custom-input {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  min-width: 0;
+}
+.pp-custom-add {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.pp-custom-add:hover { color: var(--accent); background: var(--accent-light); }
+.pp-divider { height: 1px; background: var(--border); margin: 2px 0; }
+.pp-list { max-height: 180px; overflow-y: auto; }
+.pp-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+}
+.pp-item:hover { background: rgba(255,255,255,.06); }
+.pp-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  margin: 0;
+  flex-shrink: 0;
+}
+.pp-all { font-weight: 600; color: var(--accent); }
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
@@ -1149,6 +1255,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 
 .folder-picker {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
@@ -1249,3 +1356,5 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   text-align: left;
 }
 .fp-tip-icon { flex-shrink: 0; color: var(--accent); }
+.fp-tip.fp-tip-green { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.25); color: #16a34a; }
+.fp-tip.fp-tip-green .fp-tip-icon { color: #16a34a; }

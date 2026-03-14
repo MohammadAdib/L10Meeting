@@ -1,7 +1,7 @@
 import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
-import { onStatusChange, confirmDialog } from './utils';
+import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
 import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
@@ -436,7 +436,7 @@ function showFolderPicker(hasStored: boolean): void {
     <div class="folder-picker">
       <div class="fp-card">
         <h1 class="fp-title">L10 Meeting Manager</h1>
-        <p class="fp-desc">Select a new or existing folder to store your meeting data — this choice is remembered.</p>
+        <p class="fp-desc">Select a new or existing folder to store your meeting data. This choice is remembered.</p>
 
         <div class="fp-divider"></div>
 
@@ -458,8 +458,12 @@ function showFolderPicker(hasStored: boolean): void {
 
         <div class="fp-tip">
           <svg class="fp-tip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
-          Use a folder synced with OneDrive, Google Drive, or Dropbox for backup and multi-device access.
+          Tip: Use a folder synced with OneDrive, Google Drive, or Dropbox for backup and multi-device access.
         </div>
+      </div>
+      <div class="fp-tip fp-tip-green">
+        <svg class="fp-tip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        No data is collected. All your data stays locally on your machine.
       </div>
     </div>
   `;
@@ -484,6 +488,7 @@ function showFolderPicker(hasStored: boolean): void {
 
 async function startApp(): Promise<void> {
   await initLogo();
+  initPersonPickers();
   window.addEventListener('hashchange', route);
   route();
 }

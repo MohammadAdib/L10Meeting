@@ -12,11 +12,15 @@ export function setPeople(people: string[]): void {
   _people = people;
 }
 
-/** Build a person <select> dropdown from the department people list */
+/** Build a multi-select person picker widget */
 function personSelect(): string {
-  const opts = [`<option value=""></option>`]
-    .concat(_people.map(p => `<option value="${p}">${p}</option>`))
-    .join('');
+  const dataAttr = _people.map(p => p.replace(/"/g, '&quot;')).join('|||');
+  return `<div class="person-picker" data-people="${dataAttr}"><input type="hidden" class="person-value"><button type="button" class="person-picker-btn" tabindex="0"></button><button type="button" class="person-picker-clear" tabindex="-1">&times;</button></div>`;
+}
+
+/** Build a single-select person dropdown (used for rating table) */
+function personSelectSingle(): string {
+  const opts = ['', ..._people].map(p => `<option value="${p.replace(/"/g, '&quot;')}">${p}</option>`).join('');
   return `<select class="person-select">${opts}</select>`;
 }
 
@@ -130,7 +134,7 @@ export function addRatingRow(): void {
   const stars = Array.from({ length: 10 }, (_, i) =>
     `<button onclick="window.__setRating(this,${i + 1})">&#9733;</button>`
   ).join('');
-  tr.innerHTML = `<td>${personSelect()}</td><td><div class="rating-stars">${stars}</div><input type="hidden" class="rating-value" value="0"></td><td><input placeholder="Comment"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td>${personSelectSingle()}</td><td><div class="rating-stars">${stars}</div><input type="hidden" class="rating-value" value="0"></td><td><input placeholder="Comment"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
