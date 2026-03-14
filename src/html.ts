@@ -37,9 +37,7 @@ export function buildScorecardContent(): string {
       <div class="section-header" style="cursor:default"><h2>SCORECARD TRACKER (Rolling 13 Weeks)</h2></div>
       <div class="section-body">
         <p class="section-desc">Track weekly actuals below. Use color-coded status to flag off-track items.</p>
-        <div style="overflow-x:auto;">
         ${tableHTML('scorecardFullTable', ['Measurable / KPI', 'Owner', 'Goal', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5', 'Wk 6', 'Wk 7', 'Wk 8', 'Wk 9', 'Wk 10', 'Wk 11', 'Wk 12', 'Wk 13', 'w:30:'])}
-        </div>
         <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecardFull">+ Add Measurable</button>
       </div>
     </div>`;
@@ -58,7 +56,7 @@ export function buildOkrsContent(): string {
           <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
         </div>
         <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
-        ${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}
+        <div style="overflow-x:auto">${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}</div>
         <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
         <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
       </div>

@@ -436,7 +436,8 @@ body {
 }
 .section-body {
   padding: 0 20px 20px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .section-body-wrap.collapsed .section-body {
   padding-top: 0;
@@ -563,6 +564,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   padding: 16px;
   margin-bottom: 12px;
   border: 1px solid var(--border);
+  overflow-x: auto;
 }
 .ids-issue-header {
   display: flex;
@@ -1602,3 +1604,83 @@ td:has(.person-picker) { vertical-align: middle; }
 .fp-tip-icon { flex-shrink: 0; color: var(--accent); }
 .fp-tip.fp-tip-green { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.25); color: #16a34a; }
 .fp-tip.fp-tip-green .fp-tip-icon { color: #16a34a; }
+
+/* ── MOBILE / NARROW ── */
+@media (max-width: 768px) {
+  /* Top bar: compact */
+  .top-bar { padding: 0 8px; min-height: 44px; }
+  .top-bar-left { gap: 8px; }
+  .top-tab { padding: 0 14px; font-size: 13px; }
+  .top-bar-logo { height: 26px; }
+  .top-bar-logo-placeholder { padding: 4px 10px; font-size: 12px; }
+
+  /* Sidebar: horizontal strip */
+  .app-layout { display: flex; flex-direction: column; }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 50;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar { display: none; }
+  .sidebar .meeting-control {
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    padding: 6px 10px;
+    flex-shrink: 0;
+  }
+  .sidebar .meeting-start-btn,
+  .sidebar .meeting-stop-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    white-space: nowrap;
+    width: auto;
+  }
+  .sidebar-item {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .sidebar-item:hover { padding-left: 12px; }
+  .sidebar-item.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent);
+  }
+  .sidebar-label { display: none; }
+  .sidebar-num { width: 22px; height: 22px; font-size: 11px; }
+
+  /* Main content: full width */
+  .main-content { margin-left: 0; }
+  .container { padding: 16px 12px 60px; }
+
+  /* Meta grid: single column */
+  .meta-grid { grid-template-columns: 1fr !important; }
+
+  /* Segue: single column */
+  .segue-grid { grid-template-columns: 1fr; }
+
+  /* Section header: wrap */
+  .section-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+  .section-header h2 { font-size: 13px; gap: 6px; }
+  .section-num { width: 24px; height: 24px; font-size: 11px; }
+  .section-timer { gap: 4px; }
+  .timer-btn { width: 26px; height: 26px; font-size: 12px; }
+  .timer-badge { font-size: 11px; padding: 3px 8px; }
+
+  /* Section body: less padding */
+  .section-body { padding: 0 12px 14px; }
+
+  /* Blur overflow on narrow */
+  .app-layout:has(#tab-meeting.blurred) { overflow: hidden; }
+}
