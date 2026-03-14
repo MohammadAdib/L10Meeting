@@ -27,13 +27,13 @@ npm run dev
 
 ## Building the Executable
 
-```bash
+```
 npm run package
 ```
 
 Or use the batch script:
 
-```bash
+```
 build.bat
 ```
 

@@ -20,7 +20,7 @@ app.use(express.static(staticDir));
 
 // Helper: get department directory path (with validation)
 function deptDir(name: string): string {
-  const dir = path.join(dataDir, 'departments', name);
+  const dir = path.join(dataDir, 'Departments', name);
   if (!dir.startsWith(path.join(dataDir, 'Departments'))) throw new Error('Forbidden');
   return dir;
 }

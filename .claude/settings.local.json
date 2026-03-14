@@ -55,7 +55,10 @@
       "Bash(powershell -Command \"try { [System.IO.Directory]::Move\\('C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\departments', 'C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\Departments2'\\) } catch { Write-Host \\\\$_.Exception.Message }\")",
       "Bash(cmd //c \"cd C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data && ren departments Departments2\")",
       "Bash(xcopy \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\departments\" \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\Departments\\\\\" /E /I /Y 2>&1 | tail -5)",
-      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && node -p \"JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\")"
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && node -p \"JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\")",
+      "Bash(taskkill //F //IM node.exe 2>&1; cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\" && cmd //c \"ren departments _tmp\" && cmd //c \"ren _tmp Departments\")",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc -p tsconfig.server.json && del server-dist\\\\index.cjs && ren server-dist\\\\index.js index.cjs)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && npx tsc -p tsconfig.server.json && rm server-dist/index.cjs && cmd //c \"ren server-dist\\\\\\\\index.js index.cjs\")"
     ]
   }
 }
