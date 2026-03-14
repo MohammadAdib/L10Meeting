@@ -222,6 +222,16 @@ async function writeExcelData(dirHandle: FileSystemDirectoryHandle, fileName: st
   await writable.close();
 }
 
+/** Export meeting data to an Excel buffer (no folder needed) */
+export async function exportMeetingToBuffer(data: Record<string, any>): Promise<ArrayBuffer> {
+  const wb = new ExcelJS.Workbook();
+  const templateBuffer = await getBlankTemplate();
+  await wb.xlsx.load(templateBuffer);
+  const ws = wb.getWorksheet('L10 Meeting');
+  if (ws) writeJsonToWorkbook(wb, ws, data);
+  return wb.xlsx.writeBuffer() as Promise<ArrayBuffer>;
+}
+
 // ── Public API (replaces all fetch calls) ──
 
 export async function getDepartments(): Promise<{ name: string; peopleCount: number }[]> {
