@@ -20,10 +20,4 @@ export const SECTIONS: SectionConfig[] = [
   { num: 7, name: 'Conclude', time: 300 },
 ];
 
-export const DEFAULT_MEASURABLES = [
-  'Mission Ready - Raptor',
-  'Mission Ready - Sparrow',
-  'Mission Ready - CBAM Quad',
-  'Sales for Q1 - $1M',
-  '', '', '',
-];
+export const DEFAULT_MEASURABLES = ['', '', '', '', '', '', ''];

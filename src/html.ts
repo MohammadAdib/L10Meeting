@@ -1,4 +1,5 @@
 import { SECTIONS } from './types';
+import logoUrl from './logo.png';
 
 function sectionCard(num: number, title: string, timeLabel: string, bodyId: string, bodyHTML: string): string {
   return `
@@ -27,32 +28,49 @@ function tableHTML(id: string, headers: string[]): string {
 }
 
 export function buildAppHTML(): string {
-  const navButtons = SECTIONS.map((s, i) =>
-    `<button class="${i === 0 ? 'active' : ''}" data-nav="${s.num}">${s.num}. ${s.name}</button>`
+  const sidebarItems = SECTIONS.map((s, i) =>
+    `<a class="sidebar-item${i === 0 ? ' active' : ''}" data-nav="${s.num}" href="#sec-${s.num}">
+      <span class="sidebar-num">${s.num}</span>
+      <span class="sidebar-label">${s.name}</span>
+    </a>`
   ).join('');
 
   return `
-<div class="top-bar">
-  <h1>TITAN DYNAMICS <span>— L10 MEETING</span></h1>
-  <div class="top-bar-actions">
-    <button class="btn btn-outline" id="btnSave">Save Draft</button>
-    <button class="btn btn-outline" id="btnLoad">Load Draft</button>
-    <button class="btn btn-outline" id="btnReset">Reset</button>
-    <button class="btn btn-primary" id="btnExport">Export PDF</button>
+<div class="top-bar-wrapper">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
+      <div class="top-bar-tabs">
+        <button class="top-tab active" data-tab="meeting">L10 Meeting</button>
+        <button class="top-tab" data-tab="scorecard">Scorecard</button>
+        <button class="top-tab" data-tab="okrs">OKRs</button>
+      </div>
+    </div>
+    <div class="meeting-control">
+      <button class="meeting-start-btn" id="btnMeetingStart">&#9654; Start Meeting</button>
+    </div>
+    <div class="top-bar-actions">
+      <button class="btn btn-outline" id="btnSave">Save Draft</button>
+      <button class="btn btn-outline" id="btnLoad">Load Draft</button>
+      <button class="btn btn-outline" id="btnReset">Reset</button>
+      <button class="btn btn-primary" id="btnExport">Export PDF</button>
+    </div>
   </div>
+  <div class="global-progress"><div class="global-progress-fill" id="globalProgress"></div></div>
 </div>
 
-<div class="container">
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="meeting">L10 Meeting</button>
-    <button class="tab-btn" data-tab="scorecard">Scorecard</button>
-    <button class="tab-btn" data-tab="okrs">OKRs</button>
-  </div>
+<div class="app-layout">
+  <!-- LEFT SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    ${sidebarItems}
+  </nav>
 
-  <!-- MEETING TAB -->
-  <div id="tab-meeting" class="tab-content active">
-    <div class="progress-bar"><div class="progress-fill" id="meetingProgress" style="width:0%"></div></div>
-    <div class="section-nav" id="sectionNav">${navButtons}</div>
+  <div class="main-content">
+    <div class="container">
+
+      <!-- MEETING TAB -->
+      <div id="tab-meeting" class="tab-content active">
+        <div class="progress-bar"><div class="progress-fill" id="meetingProgress" style="width:0%"></div></div>
 
     <div class="meta-grid">
       <div class="meta-field"><label>Team</label><input id="metaTeam" placeholder="e.g. Leadership Team"></div>
@@ -73,7 +91,7 @@ export function buildAppHTML(): string {
 
     ${sectionCard(2, 'SCORECARD REVIEW', '5:00', 'body-2', `
       <p class="section-desc">Review each measurable. Off-track items → add to IDS.</p>
-      ${tableHTML('scorecardTable', ['Measurable / KPI', 'Owner', 'Goal', 'Actual', 'w:110:Status', 'Notes', 'w:30:'])}
+      ${tableHTML('scorecardTable', ['w:300:Measurable / KPI', 'Owner', 'Goal', 'Actual', 'w:110:Status', 'Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecard">+ Add Measurable</button>
     `)}
 
@@ -157,8 +175,10 @@ export function buildAppHTML(): string {
         <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
       </div>
     </div>
+    </div>
   </div>
-</div>
+  </div><!-- end main-content -->
+</div><!-- end app-layout -->
 
 <div class="toast"></div>`;
 }

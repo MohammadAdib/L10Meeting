@@ -67,4 +67,6 @@ export function updateProgress(): void {
   const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
   const fill = document.getElementById('meetingProgress');
   if (fill) fill.style.width = pct + '%';
+  const globalFill = document.getElementById('globalProgress');
+  if (globalFill) globalFill.style.width = pct + '%';
 }
