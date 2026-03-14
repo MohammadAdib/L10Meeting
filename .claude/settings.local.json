@@ -45,7 +45,17 @@
       "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx tsc --noEmit 2>&1)",
       "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx tsc -p tsconfig.server.json --noEmit 2>&1)",
       "Bash(taskkill /f /im L10Meeting.exe 2>/dev/null; npx kill-port 3847 2>/dev/null; node -e \"require\\('child_process'\\).execSync\\('netstat -ano | findstr :3847', {stdio:'pipe'}\\).toString\\(\\)\" 2>/dev/null || echo \"port is free\")",
-      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node server-dist/index.cjs 2>&1)"
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && node server-dist/index.cjs 2>&1)",
+      "Bash(npx kill-port:*)",
+      "Bash(cd C:/Users/MohammadAdib/Documents/GitHub/CompanyTools && npx tsc -p tsconfig.server.json && mv server-dist/index.js server-dist/index.cjs && node server-dist/index.cjs 2>&1)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\" && cmd //c \"rename departments _dept_tmp\" && cmd //c \"rename _dept_tmp Departments\")",
+      "Bash(powershell -Command \"Rename-Item -Path 'C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\departments' -NewName '_dept_tmp' -Force; Rename-Item -Path 'C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\_dept_tmp' -NewName 'Departments' -Force\")",
+      "Bash(powershell -Command \"try { [System.IO.Directory]::Move\\('C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\departments', 'C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\Departments2'\\) } catch { Write-Host \\\\$_.Exception.Message }\")",
+      "Bash(cmd //c \"cd C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data && ren departments Departments2\")",
+      "Bash(xcopy \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\departments\" \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\\\\data\\\\Departments\\\\\" /E /I /Y 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\MohammadAdib\\\\Documents\\\\GitHub\\\\CompanyTools\" && node -p \"JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\")"
     ]
   }
 }
