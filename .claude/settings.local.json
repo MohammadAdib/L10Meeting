@@ -13,7 +13,11 @@
       "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install html2pdf.js 2>&1 | tail -3)",
       "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run build 2>&1)",
       "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run dev 2>&1 | head -15)",
-      "Bash(sleep 3 && curl -s http://localhost:5173/ 2>/dev/null | head -20)"
+      "Bash(sleep 3 && curl -s http://localhost:5173/ 2>/dev/null | head -20)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install exceljs 2>&1 | tail -3)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && python -c \"\nimport openpyxl, sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\('L10_Meeting_Template.xlsx', data_only=True\\)\nws = wb['L10 Meeting']\nfor row in ws.iter_rows\\(min_row=76, max_row=200, max_col=6, values_only=False\\):\n    for cell in row:\n        if cell.value is not None:\n            print\\(f'{cell.coordinate}: {repr\\(cell.value\\)}'\\)\n\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
