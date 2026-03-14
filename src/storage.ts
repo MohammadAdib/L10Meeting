@@ -5,7 +5,7 @@ import {
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, addScorecardFullRow, addOkrFullRow,
 } from './tables';
-import { createMeeting, saveMeeting, downloadMeetingExcel } from './fs-service';
+import { createMeeting, saveMeeting } from './fs-service';
 
 /** Gather all meeting data from the DOM into a JSON-serializable object */
 export function gatherMeetingData(): Record<string, unknown> {
@@ -317,17 +317,70 @@ function showAutoSaved(): void {
   _savedFadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 3000);
 }
 
-/** Force a save then download the Excel file */
-export async function openInExcel(): Promise<void> {
-  await doAutoSave();
-  if (!_autoSaveDept || !_autoSaveMeetingId) {
-    showToast('Save the meeting first before downloading.');
-    return;
-  }
-  try {
-    await downloadMeetingExcel(_autoSaveDept, _autoSaveMeetingId);
-    showToast('Downloading Excel file...');
-  } catch {
-    showToast('Could not download file.');
-  }
+// ── Scorecard / OKR Sync ──
+
+let _syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function syncScorecardToReview(): void {
+  const fullRows = document.querySelectorAll('#scorecardFullTable tbody tr');
+  const reviewRows = document.querySelectorAll('#scorecardTable tbody tr');
+  fullRows.forEach((fullTr, i) => {
+    if (i >= reviewRows.length) return;
+    const fullEls = fullTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    const revEls = reviewRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    // scorecardFullTable: [name(0), owner(1), goal(2), wk1...wk13]
+    // scorecardTable:     [name(0), owner(1), goal(2), actual(3), status(4), notes(5)]
+    if (fullEls[0] && revEls[0] && revEls[0].value !== fullEls[0].value) revEls[0].value = fullEls[0].value;
+    if (fullEls[1] && revEls[1] && revEls[1].value !== fullEls[1].value) revEls[1].value = fullEls[1].value;
+  });
 }
+
+function syncReviewToScorecard(): void {
+  const fullRows = document.querySelectorAll('#scorecardFullTable tbody tr');
+  const reviewRows = document.querySelectorAll('#scorecardTable tbody tr');
+  reviewRows.forEach((revTr, i) => {
+    if (i >= fullRows.length) return;
+    const revEls = revTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    const fullEls = fullRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    if (revEls[0] && fullEls[0] && fullEls[0].value !== revEls[0].value) fullEls[0].value = revEls[0].value;
+    if (revEls[1] && fullEls[1] && fullEls[1].value !== revEls[1].value) fullEls[1].value = revEls[1].value;
+  });
+}
+
+function syncOkrToReview(): void {
+  const fullRows = document.querySelectorAll('#okrFullTable tbody tr');
+  const reviewRows = document.querySelectorAll('#okrReviewTable tbody tr');
+  fullRows.forEach((fullTr, i) => {
+    if (i >= reviewRows.length) return;
+    const fullEls = fullTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    const revEls = reviewRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    // okrFullTable:    [skip num td, desc(0), owner(1), due(2), priority(3), %done(4), status(5), notes(6)]
+    // okrReviewTable:  [desc(0), owner(1), due(2), status(3), %done(4), notes(5)]
+    if (fullEls[0] && revEls[0] && revEls[0].value !== fullEls[0].value) revEls[0].value = fullEls[0].value;
+    if (fullEls[1] && revEls[1] && revEls[1].value !== fullEls[1].value) revEls[1].value = fullEls[1].value;
+  });
+}
+
+function syncReviewToOkr(): void {
+  const fullRows = document.querySelectorAll('#okrFullTable tbody tr');
+  const reviewRows = document.querySelectorAll('#okrReviewTable tbody tr');
+  reviewRows.forEach((revTr, i) => {
+    if (i >= fullRows.length) return;
+    const revEls = revTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    const fullEls = fullRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    if (revEls[0] && fullEls[0] && fullEls[0].value !== revEls[0].value) fullEls[0].value = revEls[0].value;
+    if (revEls[1] && fullEls[1] && fullEls[1].value !== revEls[1].value) fullEls[1].value = revEls[1].value;
+  });
+}
+
+export function setupScorecardOkrSync(): void {
+  const debounceSync = (fn: () => void) => {
+    if (_syncTimer) clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(fn, 100);
+  };
+  document.getElementById('scorecardFullTable')?.addEventListener('input', () => debounceSync(syncScorecardToReview));
+  document.getElementById('scorecardTable')?.addEventListener('input', () => debounceSync(syncReviewToScorecard));
+  document.getElementById('okrFullTable')?.addEventListener('input', () => debounceSync(syncOkrToReview));
+  document.getElementById('okrReviewTable')?.addEventListener('input', () => debounceSync(syncReviewToOkr));
+}
+

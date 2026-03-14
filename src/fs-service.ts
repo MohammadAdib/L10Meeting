@@ -1,4 +1,15 @@
 import ExcelJS from 'exceljs';
+import blankTemplateUrl from './blank.xlsx?url';
+
+// Cached blank template buffer — loaded once from bundled asset
+let _blankTemplateBuffer: ArrayBuffer | null = null;
+
+async function getBlankTemplate(): Promise<ArrayBuffer> {
+  if (_blankTemplateBuffer) return _blankTemplateBuffer;
+  const resp = await fetch(blankTemplateUrl);
+  _blankTemplateBuffer = await resp.arrayBuffer();
+  return _blankTemplateBuffer;
+}
 
 // Extend FileSystemDirectoryHandle with Chrome-specific permission methods
 declare global {
@@ -181,7 +192,7 @@ async function readExcelData(dirHandle: FileSystemDirectoryHandle, fileName: str
 
     // Fallback: read from L10 Meeting sheet
     const ws = wb.getWorksheet('L10 Meeting');
-    if (ws) return readWorkbookToJson(ws);
+    if (ws) return readWorkbookToJson(wb, ws);
     return null;
   } catch {
     return null;
@@ -191,18 +202,24 @@ async function readExcelData(dirHandle: FileSystemDirectoryHandle, fileName: str
 async function writeExcelData(dirHandle: FileSystemDirectoryHandle, fileName: string, data: Record<string, any>): Promise<void> {
   const wb = new ExcelJS.Workbook();
 
-  // Try to read existing file as base
+  // Try to read existing file as base; fall back to blank.xlsx template
+  let loaded = false;
   try {
     const fileHandle = await dirHandle.getFileHandle(fileName);
     const file = await fileHandle.getFile();
     const buffer = await file.arrayBuffer();
     await wb.xlsx.load(buffer);
-  } catch {
-    wb.addWorksheet('L10 Meeting');
+    loaded = true;
+  } catch { /* file doesn't exist yet */ }
+
+  if (!loaded) {
+    // Use blank.xlsx as the base template — preserves all formatting, formulas, merged cells
+    const templateBuffer = await getBlankTemplate();
+    await wb.xlsx.load(templateBuffer);
   }
 
   const ws = wb.getWorksheet('L10 Meeting');
-  if (ws) writeJsonToWorkbook(ws, data);
+  if (ws) writeJsonToWorkbook(wb, ws, data);
 
   let dataWs = wb.getWorksheet('_data');
   if (!dataWs) dataWs = wb.addWorksheet('_data');
@@ -544,25 +561,11 @@ export async function importMeetingFile(deptName: string, fileData: ArrayBuffer)
   }
 }
 
-export async function downloadMeetingExcel(deptName: string, meetingId: string): Promise<void> {
-  if (!_rootHandle) return;
-  try {
-    const meetings = await getMeetingsHandle(deptName);
-    const fileHandle = await meetings.getFileHandle(`${meetingId}.xlsx`);
-    const file = await fileHandle.getFile();
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${meetingId}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch { /* silent */ }
-}
 
 // ── Excel helpers (ported from server/index.ts) ──
 
 function stripEmoji(s: string): string {
-  return s.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F900}-\u{1F9FF}]|[\u{200D}]|[\u{20E3}]|[\u{E0020}-\u{E007F}]/gu, '').trim();
+  return s.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2300}-\u{23FF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F900}-\u{1F9FF}]|[\u{200D}]|[\u{20E3}]|[\u{E0020}-\u{E007F}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|[\u{2705}]|[\u{274C}]/gu, '').trim();
 }
 
 function cellStr(ws: ExcelJS.Worksheet, ref: string): string {
@@ -585,7 +588,7 @@ function formatDateCell(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function readWorkbookToJson(ws: ExcelJS.Worksheet): Record<string, any> {
+function readWorkbookToJson(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet): Record<string, any> {
   const c = (ref: string) => cellStr(ws, ref);
   const data: Record<string, any> = {
     meta: {
@@ -595,27 +598,92 @@ function readWorkbookToJson(ws: ExcelJS.Worksheet): Record<string, any> {
     segue: { personal: c('B8'), professional: c('B9') },
   };
 
+  // Read scorecard/OKR review from L10 Meeting sheet
   data.scorecardTable = readTable(ws, 14, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.okrReviewTable = readTable(ws, 26, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+
+  // Read full Scorecard from separate sheet if it exists
+  const scSheet = wb.getWorksheet('Scorecard');
+  if (scSheet) {
+    const scC = (ref: string) => cellStr(scSheet, ref);
+    // Scorecard data: rows 4-13, cols A (name), B (owner), C-O (wk1-wk13) — but our table is A=name, B=owner, C=goal, D-P=weeks
+    // Template: Row 3 is header, data at 4-13, cols A=name, B=owner, C..M = wk1-wk13 (no Goal column)
+    const scRows: string[][] = [];
+    for (let r = 4; r <= 13; r++) {
+      const name = scC(`A${r}`);
+      const owner = scC(`B${r}`);
+      if (!name || name.startsWith('Measurable')) continue;
+      const row = [name, owner, '']; // name, owner, goal (no goal in template)
+      for (let w = 0; w < 13; w++) {
+        row.push(scC(`${String.fromCharCode(67 + w)}${r}`)); // C through O
+      }
+      scRows.push(row);
+    }
+    if (scRows.length > 0) data.scorecardFullTable = scRows;
+
+    // Also populate scorecardTable from scorecard sheet names/owners if L10 Meeting had formula refs
+    if (data.scorecardTable.length === 0 || data.scorecardTable.every((r: string[]) => !r[0] || r[0] === '[object Object]')) {
+      data.scorecardTable = scRows.map((r: string[]) => [r[0], r[1], '', '', '', '']); // name, owner, goal, actual, status, notes
+    }
+  }
+
+  // Read full OKRs from separate sheet if it exists
+  const okrSheet = wb.getWorksheet('OKRs');
+  if (okrSheet) {
+    const okC = (ref: string) => cellStr(okrSheet, ref);
+    // OKR data: rows 5-14, cols A=#, B=desc, C=owner, D=due, E=priority, F=%done, G=status, H=notes
+    // The # column is static in the UI, so exclude it from stored data
+    const okrRows: string[][] = [];
+    for (let r = 5; r <= 14; r++) {
+      const desc = okC(`B${r}`);
+      if (!desc) continue;
+      okrRows.push([desc, okC(`C${r}`), okC(`D${r}`), okC(`E${r}`), okC(`F${r}`), okC(`G${r}`), okC(`H${r}`)]);
+    }
+    if (okrRows.length > 0) data.okrFullTable = okrRows;
+
+    // Also populate okrReviewTable from OKRs sheet if L10 Meeting had formula refs
+    if (data.okrReviewTable.length === 0 || data.okrReviewTable.every((r: string[]) => !r[0] || r[0] === '[object Object]')) {
+      data.okrReviewTable = okrRows.map((r: string[]) => [r[0], r[1], r[2], r[5], r[4], r[6]]); // desc, owner, due, status, %done, notes
+    }
+
+    // Read key results blocks
+    const keyResults: string[][][] = [];
+    // OKR #1 key results at row 19, #2 at 25, #3 at 31
+    const krStarts = [19, 25, 31];
+    for (const start of krStarts) {
+      const krRows: string[][] = [];
+      for (let r = start; r <= start + 2; r++) {
+        const kr = okC(`B${r}`);
+        if (!kr) continue;
+        krRows.push([kr, okC(`C${r}`), okC(`D${r}`), okC(`E${r}`), okC(`F${r}`), okC(`G${r}`), okC(`H${r}`)]);
+      }
+      keyResults.push(krRows);
+    }
+    if (keyResults.some(kr => kr.length > 0)) data.keyResults = keyResults;
+  }
   data.headlinesTable = readTable(ws, 37, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.todoReviewTable = readTable(ws, 47, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.issuesListTable = readTable(ws, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
 
-  const idsOffset = c('A79').startsWith('Issue:') ? 1 : 0;
+  // Dynamically find IDS issue blocks by scanning for "Issue:" in column A
   const idsBlocks: any[] = [];
-  for (let bi = 0; bi < 10; bi++) {
-    const base = 77 + idsOffset + bi * 9;
-    const fields = [c(`B${base + 1}`), c(`B${base + 2}`), c(`B${base + 3}`)];
-    const isPlaceholder = (s: string) => !s || s.startsWith('Describe the real') || s.startsWith("Ask 'why?'") || s.startsWith('Agreed solution');
-    if (isPlaceholder(fields[0]) && isPlaceholder(fields[1]) && isPlaceholder(fields[2])) continue;
-    const todoStart = idsOffset ? base + 5 : base + 4;
-    idsBlocks.push({ fields, todos: readTable(ws, todoStart, 5, ['A', 'B', 'C', 'D', 'E', 'F']) });
+  for (let r = 78; r <= 168; r++) {
+    const a = c(`A${r}`);
+    if (a === 'Issue:') {
+      const fields = [c(`B${r}`), c(`B${r + 1}`), c(`B${r + 2}`)];
+      const isPlaceholder = (s: string) => !s || s.startsWith('Describe the real') || s.startsWith("Ask 'why?'") || s.startsWith('Agreed solution');
+      if (isPlaceholder(fields[0]) && isPlaceholder(fields[1]) && isPlaceholder(fields[2])) continue;
+      // Todo header ("New To-Do(s)") is at r+3, data starts at r+4
+      const todos = readTable(ws, r + 4, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
+      idsBlocks.push({ fields, todos });
+    }
   }
   data.idsBlocks = idsBlocks;
 
-  const newTodoStart = 171 + idsOffset;
-  const cascadingStart = 184 + idsOffset;
-  const ratingStart = 192 + idsOffset;
+  // Conclude section — data rows (after header rows)
+  const newTodoStart = 172;
+  const cascadingStart = 185;
+  const ratingStart = 193;
 
   data.newTodoTable = readTable(ws, newTodoStart, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.cascadingTable = readTable(ws, cascadingStart, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
@@ -648,7 +716,7 @@ function readTable(ws: ExcelJS.Worksheet, startRow: number, maxRows: number, col
   return rows;
 }
 
-function writeJsonToWorkbook(ws: ExcelJS.Worksheet, data: Record<string, any>): void {
+function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: Record<string, any>): void {
   const meta = data.meta || {};
   ws.getCell('B2').value = meta.team || '';
   ws.getCell('E2').value = meta.date || '';
@@ -673,34 +741,38 @@ function writeJsonToWorkbook(ws: ExcelJS.Worksheet, data: Record<string, any>): 
 
   writeTable(ws, data.issuesListTable, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
 
-  const issueStarts = [77, 86, 95, 104, 113, 122, 131, 140, 149, 158];
+  // IDS block layout: header(base), Issue:(base+1), Root Cause:(base+2), Solution:(base+3), Todo header(base+4), todos(base+5..base+9)
+  const issueStarts = [78, 87, 96, 105, 114, 123, 132, 141, 150, 159];
   const idsBlocks = data.idsBlocks || [];
   idsBlocks.forEach((block: any, bi: number) => {
     if (bi >= issueStarts.length) return;
     const base = issueStarts[bi];
     const fields = block.fields || [];
+    // base is the header row ("Issue #N"), fields go into Issue:/Root Cause:/Solution: rows
     if (fields[0]) ws.getCell(`B${base + 1}`).value = fields[0];
     if (fields[1]) ws.getCell(`B${base + 2}`).value = fields[1];
     if (fields[2]) ws.getCell(`B${base + 3}`).value = fields[2];
-    writeTable(ws, block.todos, base + 4, 5, ['A', 'B', 'C', 'D', 'E', 'F']);
+    // Todos start after the "New To-Do(s)" header row
+    writeTable(ws, block.todos, base + 5, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
   });
 
-  writeTable(ws, data.newTodoTable, 171, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
-  writeTable(ws, data.cascadingTable, 184, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
+  writeTable(ws, data.newTodoTable, 172, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
+  writeTable(ws, data.cascadingTable, 185, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
 
   const ratingTable = data.ratingTable || [];
   const ratingValues = data.ratingValues || [];
   let ratingSum = 0, ratingCount = 0;
   ratingTable.forEach((row: string[], i: number) => {
-    if (i > 5) return;
-    const r = 192 + i;
+    if (i > 9) return;
+    const r = 193 + i;
     ws.getCell(`A${r}`).value = row[0] || '';
     const rv = parseInt(ratingValues[i]) || 0;
     ws.getCell(`B${r}`).value = rv > 0 ? rv : '';
     ws.getCell(`C${r}`).value = row[2] || '';
     if (rv > 0) { ratingSum += rv; ratingCount++; }
   });
-  ws.getCell('B198').value = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : '';
+  ws.getCell('A199').value = 'Average Rating:';
+  ws.getCell('B199').value = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : '';
 
   const validations: { col: string; startRow: number; count: number; options: string[] }[] = [
     { col: 'E', startRow: 14, count: 7, options: ['On Track', 'Off Track', 'At Risk'] },
@@ -713,9 +785,9 @@ function writeJsonToWorkbook(ws: ExcelJS.Worksheet, data: Record<string, any>): 
     { col: 'C', startRow: 60, count: 16, options: ['High', 'Medium', 'Low'] },
     { col: 'D', startRow: 60, count: 16, options: ['Open', 'Solved', 'Next Meeting', 'Dropped'] },
     { col: 'F', startRow: 60, count: 16, options: ['Yes', 'No'] },
-    { col: 'D', startRow: 171, count: 11, options: ['High', 'Medium', 'Low'] },
-    { col: 'E', startRow: 171, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
-    { col: 'F', startRow: 184, count: 6, options: ['Yes', 'No'] },
+    { col: 'D', startRow: 172, count: 11, options: ['High', 'Medium', 'Low'] },
+    { col: 'E', startRow: 172, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
+    { col: 'F', startRow: 185, count: 6, options: ['Yes', 'No'] },
   ];
   for (const v of validations) {
     for (let i = 0; i < v.count; i++) {
@@ -728,13 +800,68 @@ function writeJsonToWorkbook(ws: ExcelJS.Worksheet, data: Record<string, any>): 
 
   for (let bi = 0; bi < issueStarts.length; bi++) {
     const base = issueStarts[bi];
-    for (let i = 0; i < 5; i++) {
-      ws.getCell(`D${base + 4 + i}`).dataValidation = {
+    for (let i = 0; i < 4; i++) {
+      ws.getCell(`D${base + 5 + i}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: ['"High,Medium,Low"'],
       };
-      ws.getCell(`E${base + 4 + i}`).dataValidation = {
+      ws.getCell(`E${base + 5 + i}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: ['"Not Started,In Progress,Done"'],
       };
+    }
+  }
+
+  // Write to Scorecard sheet
+  const scFullRows = data.scorecardFullTable as string[][] | undefined;
+  if (scFullRows) {
+    let scSheet = wb.getWorksheet('Scorecard');
+    if (!scSheet) scSheet = wb.addWorksheet('Scorecard');
+    scFullRows.forEach((row, i) => {
+      if (i >= 10) return;
+      const r = 4 + i;
+      scSheet!.getCell(`A${r}`).value = row[0] || ''; // name
+      scSheet!.getCell(`B${r}`).value = row[1] || ''; // owner
+      // row[2] is goal, skip (not in scorecard sheet)
+      // Weeks data starts at row[3]
+      for (let w = 0; w < 13; w++) {
+        scSheet!.getCell(`${String.fromCharCode(67 + w)}${r}`).value = row[3 + w] || '';
+      }
+    });
+  }
+
+  // Write to OKRs sheet
+  const okrFullRows = data.okrFullTable as string[][] | undefined;
+  if (okrFullRows) {
+    let okrSheet = wb.getWorksheet('OKRs');
+    if (!okrSheet) okrSheet = wb.addWorksheet('OKRs');
+    okrFullRows.forEach((row, i) => {
+      if (i >= 10) return;
+      const r = 5 + i;
+      // row = [desc, owner, due, priority, %done, status, notes] (no # column)
+      okrSheet!.getCell(`A${r}`).value = i + 1; // row number
+      okrSheet!.getCell(`B${r}`).value = row[0] || '';
+      okrSheet!.getCell(`C${r}`).value = row[1] || '';
+      okrSheet!.getCell(`D${r}`).value = row[2] || '';
+      okrSheet!.getCell(`E${r}`).value = row[3] || '';
+      okrSheet!.getCell(`F${r}`).value = row[4] || '';
+      okrSheet!.getCell(`G${r}`).value = row[5] || '';
+      okrSheet!.getCell(`H${r}`).value = row[6] || '';
+    });
+
+    // Write key results
+    const keyResults = data.keyResults as string[][][] | undefined;
+    if (keyResults) {
+      const krStarts = [19, 25, 31];
+      keyResults.forEach((krRows, ki) => {
+        if (ki >= krStarts.length) return;
+        krRows.forEach((row, ri) => {
+          if (ri >= 3) return;
+          const r = krStarts[ki] + ri;
+          okrSheet!.getCell(`A${r}`).value = ri + 1; // row number
+          for (let ci = 0; ci < 7 && ci < row.length; ci++) {
+            okrSheet!.getCell(`${String.fromCharCode(66 + ci)}${r}`).value = row[ci] || ''; // B onwards
+          }
+        });
+      });
     }
   }
 }

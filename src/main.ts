@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
-import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
+import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -112,8 +112,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       });
     }
   } else {
-    const btnExcel = document.getElementById('btnOpenExcel');
-    if (btnExcel) btnExcel.style.display = 'none';
     // New meeting: blur until started
     meetingTab.classList.add('blurred');
     sidebar.classList.add('blurred');
@@ -164,7 +162,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
       const controlDiv = document.querySelector('.meeting-control')!;
       controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${formatElapsed(meetingSeconds)}</span>`;
-      if (btnExcel) btnExcel.style.display = '';
       forceSave();
     }
 
@@ -291,6 +288,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // ── Set up auto-save ──
   // For new meetings, defer creating on server until first save
   setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new');
+  setupScorecardOkrSync();
 
   // ── Event Delegation ──
 
@@ -406,9 +404,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       resetTimer(parseInt(btn.dataset.timerReset!));
     });
   });
-
-  // Top bar buttons
-  document.getElementById('btnOpenExcel')?.addEventListener('click', openInExcel);
 
   // Add row buttons
   document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());
