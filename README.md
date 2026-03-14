@@ -19,11 +19,22 @@ npm run start
 
 This builds the frontend and server, then starts it at `http://localhost:3847`.
 
-For development with hot reload (frontend only — needs the server running separately):
+### Development with Hot Reload
 
+For frontend hot reload during development, run two terminals:
+
+Terminal 1 — build and start the API server:
+```
+npm run build:server
+node server-dist/index.cjs
+```
+
+Terminal 2 — start Vite dev server:
 ```
 npm run dev
 ```
+
+Then open `http://localhost:5173/CompanyTools/`. Frontend changes hot reload automatically. API calls are proxied to the server on port 3847.
 
 ## Building the Executable
 

@@ -88,59 +88,69 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // ── Meeting start/stop ──
   const meetingTab = document.getElementById('tab-meeting')!;
   const sidebar = document.getElementById('sidebar')!;
-  meetingTab.classList.add('blurred');
-  sidebar.classList.add('blurred');
+  const isExisting = meetingId !== 'new';
 
-  let meetingInterval: ReturnType<typeof setInterval> | null = null;
-  let meetingSeconds = 0;
-
-  function formatElapsed(secs: number): string {
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    return `${m}:${String(s).padStart(2, '0')}`;
-  }
-
-  function startMeeting() {
-    markMeetingStarted();
-    meetingTab.classList.remove('blurred');
-    sidebar.classList.remove('blurred');
+  if (isExisting) {
+    // Existing meeting: no blur, no start/stop, show actions immediately
     const actions = document.getElementById('topBarActions')!;
     actions.style.opacity = '1';
     actions.style.pointerEvents = '';
-    // Fill start time
-    const startNow = new Date();
-    (document.getElementById('metaStart') as HTMLInputElement).value = startNow.toTimeString().slice(0, 5);
-
     const controlDiv = document.querySelector('.meeting-control')!;
-    meetingSeconds = 0;
-    controlDiv.innerHTML = `
-      <button class="meeting-stop-btn" id="btnMeetingStop">
-        <span class="stop-icon"></span>
-        <span class="meeting-timer-display" id="meetingElapsed">0:00</span>
-      </button>`;
+    controlDiv.innerHTML = '';
+  } else {
+    // New meeting: blur until started
+    meetingTab.classList.add('blurred');
+    sidebar.classList.add('blurred');
 
-    meetingInterval = setInterval(() => {
-      meetingSeconds++;
-      const display = document.getElementById('meetingElapsed');
-      if (display) display.textContent = formatElapsed(meetingSeconds);
-    }, 1000);
+    let meetingInterval: ReturnType<typeof setInterval> | null = null;
+    let meetingSeconds = 0;
 
-    document.getElementById('btnMeetingStop')!.addEventListener('click', stopMeeting);
+    function formatElapsed(secs: number): string {
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function startMeeting() {
+      markMeetingStarted();
+      meetingTab.classList.remove('blurred');
+      sidebar.classList.remove('blurred');
+      const actions = document.getElementById('topBarActions')!;
+      actions.style.opacity = '1';
+      actions.style.pointerEvents = '';
+      const startNow = new Date();
+      (document.getElementById('metaStart') as HTMLInputElement).value = startNow.toTimeString().slice(0, 5);
+
+      const controlDiv = document.querySelector('.meeting-control')!;
+      meetingSeconds = 0;
+      controlDiv.innerHTML = `
+        <button class="meeting-stop-btn" id="btnMeetingStop">
+          <span class="stop-icon"></span>
+          <span class="meeting-timer-display" id="meetingElapsed">0:00</span>
+        </button>`;
+
+      meetingInterval = setInterval(() => {
+        meetingSeconds++;
+        const display = document.getElementById('meetingElapsed');
+        if (display) display.textContent = formatElapsed(meetingSeconds);
+      }, 1000);
+
+      document.getElementById('btnMeetingStop')!.addEventListener('click', stopMeeting);
+    }
+
+    function stopMeeting() {
+      if (meetingInterval) clearInterval(meetingInterval);
+      const endNow = new Date();
+      (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
+
+      const controlDiv = document.querySelector('.meeting-control')!;
+      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Meeting ended — ${formatElapsed(meetingSeconds)}</span>`;
+    }
+
+    document.getElementById('btnMeetingStart')!.addEventListener('click', startMeeting);
   }
-
-  function stopMeeting() {
-    if (meetingInterval) clearInterval(meetingInterval);
-    // Fill end time
-    const endNow = new Date();
-    (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
-
-    const controlDiv = document.querySelector('.meeting-control')!;
-    controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Meeting ended — ${formatElapsed(meetingSeconds)}</span>`;
-  }
-
-  document.getElementById('btnMeetingStart')!.addEventListener('click', startMeeting);
 
   // ── Init timers ──
   initTimers();
@@ -194,9 +204,9 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── Event Delegation ──
 
-  // Logo click → back to landing page
+  // Logo click → back to department view
   document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
-    location.hash = '#/';
+    location.hash = `#/dept/${encodeURIComponent(deptName)}`;
   });
 
   // Tab switching
