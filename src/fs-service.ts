@@ -95,6 +95,38 @@ export function getFolderName(): string {
   return _rootHandle?.name ?? '';
 }
 
+/** Load logo.png from the data folder as an object URL, or null if not found */
+export async function loadLogo(): Promise<string | null> {
+  if (!_rootHandle) return null;
+  try {
+    const fileHandle = await _rootHandle.getFileHandle('logo.png');
+    const file = await fileHandle.getFile();
+    return URL.createObjectURL(file);
+  } catch {
+    return null;
+  }
+}
+
+/** Save an image file as logo.png in the data folder */
+export async function saveLogo(file: File): Promise<string> {
+  if (!_rootHandle) throw new Error('No folder selected');
+  const fileHandle = await _rootHandle.getFileHandle('logo.png', { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(file);
+  await writable.close();
+  // Return object URL for immediate use
+  const saved = await fileHandle.getFile();
+  return URL.createObjectURL(saved);
+}
+
+/** Delete logo.png from the data folder */
+export async function deleteLogo(): Promise<void> {
+  if (!_rootHandle) return;
+  try {
+    await _rootHandle.removeEntry('logo.png');
+  } catch { /* doesn't exist */ }
+}
+
 async function ensureStructure(): Promise<void> {
   if (!_rootHandle) return;
   await _rootHandle.getDirectoryHandle('Departments', { create: true });

@@ -51,6 +51,20 @@ body {
   gap: 24px;
 }
 .top-bar-logo { align-self: center; cursor: pointer; }
+.top-bar-logo-placeholder {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 16px;
+  white-space: nowrap;
+  transition: border-color .15s, color .15s;
+  align-self: center;
+}
+.top-bar-logo-placeholder:hover { border-color: var(--accent); color: var(--accent); }
 .top-bar-actions { display: flex; align-items: center; gap: 8px; transition: opacity .4s ease; }
 .server-only { display: flex; gap: 8px; }
 .load-dropdown-wrap { position: relative; }
@@ -835,8 +849,11 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 .admin-empty-content {
   color: var(--text-muted);
   font-size: 15px;
-  padding: 60px 0;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 .admin-loading {
   color: var(--text-muted);
@@ -1089,18 +1106,137 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
 .settings-folder-info:hover { background: none; }
 .settings-folder-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
 .settings-folder-name { font-size: 13px; color: var(--text-dim); font-weight: 500; }
+.settings-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
 /* ── Folder Picker ── */
+.fp-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.fp-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: .15;
+}
+.fp-glow-1 {
+  width: 500px; height: 500px;
+  background: var(--accent);
+  top: -120px; left: -100px;
+  animation: fpFloat 8s ease-in-out infinite alternate;
+}
+.fp-glow-2 {
+  width: 400px; height: 400px;
+  background: #7c3aed;
+  bottom: -80px; right: -60px;
+  animation: fpFloat 10s ease-in-out infinite alternate-reverse;
+}
+@keyframes fpFloat {
+  from { transform: translate(0, 0); }
+  to { transform: translate(30px, -20px); }
+}
+
 .folder-picker {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  text-align: center;
   padding: 40px 20px;
+  position: relative;
+  z-index: 1;
 }
-.folder-picker-logo { width: 80px; margin-bottom: 24px; }
-.folder-picker h1 { font-size: 28px; margin-bottom: 8px; }
-.folder-picker-desc { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 32px; }
-.folder-picker-btn { min-width: 240px; padding: 12px 24px; font-size: 15px; }
+
+.fp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 48px 44px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.03) inset;
+  animation: fpCardIn .5s ease both;
+}
+@keyframes fpCardIn {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fp-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  letter-spacing: -.3px;
+}
+
+.fp-desc {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+
+.fp-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 24px 0;
+}
+
+.fp-step-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.fp-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+}
+.fp-btn + .fp-btn { margin-top: 8px; }
+
+.fp-btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+.fp-btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,140,66,.3); }
+
+.fp-btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.fp-btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+.fp-btn-danger { border-color: transparent; color: var(--text-muted); font-size: 12px; }
+.fp-btn-danger:hover { color: var(--red); border-color: transparent; }
+
+.fp-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+.fp-tip-icon { flex-shrink: 0; color: var(--accent); }

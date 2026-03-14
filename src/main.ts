@@ -13,7 +13,7 @@ import {
   resetIdsIssueCount, setPeople,
 } from './tables';
 import * as fs from './fs-service';
-import logoUrl from './logo.png';
+import { getLogoUrl, initLogo, handleLogoClick } from './logo';
 
 // ── Expose globals for inline onclick handlers ──
 declare global {
@@ -299,6 +299,11 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     location.hash = `#/dept/${encodeURIComponent(deptName)}`;
   });
 
+  // Add logo button (if no logo set)
+  document.getElementById('btnAddLogo')?.addEventListener('click', () => {
+    handleLogoClick(() => initMeetingView(deptName, meetingId));
+  });
+
   // Tab switching
   document.querySelectorAll<HTMLButtonElement>('.top-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -426,16 +431,38 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 function showFolderPicker(hasStored: boolean): void {
   const app = document.getElementById('app')!;
   app.innerHTML = `
+    <div class="fp-bg">
+      <div class="fp-glow fp-glow-1"></div>
+      <div class="fp-glow fp-glow-2"></div>
+    </div>
     <div class="folder-picker">
-      <img src="${logoUrl}" alt="Titan Dynamics" class="folder-picker-logo">
-      <h1>L10 Meeting Manager</h1>
-      <p class="folder-picker-desc">Select a folder on your computer to store meeting data.<br>This choice is remembered so you only need to do it once.</p>
-      ${hasStored ? `
-        <button class="btn btn-green folder-picker-btn" id="btnRestoreFolder">Reconnect to saved folder</button>
-        <div style="margin:12px 0;color:var(--text-muted);font-size:13px;">or</div>
-      ` : ''}
-      <button class="btn btn-outline folder-picker-btn" id="btnPickFolder">Choose a folder</button>
-      ${hasStored ? `<button class="btn btn-outline folder-picker-btn" id="btnForgetFolder" style="margin-top:8px;font-size:12px;opacity:0.6;">Forget saved folder</button>` : ''}
+      <div class="fp-card">
+        <h1 class="fp-title">L10 Meeting Manager</h1>
+        <p class="fp-desc">Select a new or existing folder to store your meeting data — this choice is remembered.</p>
+
+        <div class="fp-divider"></div>
+
+        <p class="fp-step-label">${hasStored ? 'Reconnect to your data' : 'Get started'}</p>
+
+        ${hasStored ? `
+          <button class="fp-btn fp-btn-primary" id="btnRestoreFolder">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Reconnect folder
+          </button>
+          <button class="fp-btn fp-btn-ghost" id="btnPickFolder">Choose a different folder</button>
+          <button class="fp-btn fp-btn-ghost fp-btn-danger" id="btnForgetFolder">Forget saved folder</button>
+        ` : `
+          <button class="fp-btn fp-btn-primary" id="btnPickFolder">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Choose a folder
+          </button>
+        `}
+
+        <div class="fp-tip">
+          <svg class="fp-tip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+          Use a folder synced with OneDrive, Google Drive, or Dropbox for backup and multi-device access.
+        </div>
+      </div>
     </div>
   `;
 
@@ -457,7 +484,8 @@ function showFolderPicker(hasStored: boolean): void {
   });
 }
 
-function startApp(): void {
+async function startApp(): Promise<void> {
+  await initLogo();
   window.addEventListener('hashchange', route);
   route();
 }
@@ -467,7 +495,7 @@ function startApp(): void {
   const stored = await fs.hasStoredFolder();
   if (stored === 'granted') {
     await fs.restoreFolder();
-    startApp();
+    await startApp();
   } else {
     showFolderPicker(stored === 'prompt');
   }

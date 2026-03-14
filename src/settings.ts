@@ -1,5 +1,6 @@
 import * as fs from './fs-service';
 import { confirmDialog } from './utils';
+import { getLogoUrl, handleLogoClick } from './logo';
 
 let _menuEl: HTMLElement | null = null;
 
@@ -8,6 +9,7 @@ export function showSettingsMenu(anchor: HTMLElement): void {
   if (_menuEl) { _menuEl.remove(); _menuEl = null; return; }
 
   const folderName = fs.getFolderName();
+  const hasLogo = !!getLogoUrl();
   const menu = document.createElement('div');
   menu.className = 'settings-menu';
   menu.innerHTML = `
@@ -16,6 +18,9 @@ export function showSettingsMenu(anchor: HTMLElement): void {
       <span class="settings-folder-name">${folderName || 'None'}</span>
     </div>
     <button class="settings-menu-item" id="settingsChangeFolder">Change folder</button>
+    <button class="settings-menu-item" id="settingsChangeLogo">${hasLogo ? 'Change logo' : 'Add logo'}</button>
+    ${hasLogo ? `<button class="settings-menu-item settings-danger" id="settingsRemoveLogo">Remove logo</button>` : ''}
+    <div class="settings-divider"></div>
     <button class="settings-menu-item settings-danger" id="settingsForgetFolder">Forget folder</button>
   `;
 
@@ -31,6 +36,17 @@ export function showSettingsMenu(anchor: HTMLElement): void {
     close();
     const ok = await fs.pickFolder();
     if (ok) location.reload();
+  });
+
+  document.getElementById('settingsChangeLogo')?.addEventListener('click', () => {
+    close();
+    handleLogoClick(() => location.reload());
+  });
+
+  document.getElementById('settingsRemoveLogo')?.addEventListener('click', async () => {
+    close();
+    await fs.deleteLogo();
+    location.reload();
   });
 
   document.getElementById('settingsForgetFolder')?.addEventListener('click', async () => {

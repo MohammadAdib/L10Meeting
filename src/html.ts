@@ -1,5 +1,5 @@
 import { SECTIONS } from './types';
-import logoUrl from './logo.png';
+import { getLogoUrl } from './logo';
 
 function sectionCard(num: number, title: string, timeLabel: string, bodyId: string, bodyHTML: string): string {
   return `
@@ -74,7 +74,7 @@ export function buildAppHTML(deptName?: string): string {
 <div class="top-bar-wrapper">
   <div class="top-bar">
     <div class="top-bar-left">
-      <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
+      ${getLogoUrl() ? `<img src="${getLogoUrl()}" class="top-bar-logo">` : `<button class="top-bar-logo-placeholder" id="btnAddLogo">+ Add Logo</button>`}
       <div class="top-bar-tabs">
         <button class="top-tab active" data-tab="meeting">L10 Meeting</button>
         <button class="top-tab" data-tab="scorecard">Scorecard</button>

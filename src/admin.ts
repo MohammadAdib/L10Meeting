@@ -1,4 +1,4 @@
-import logoUrl from './logo.png';
+import { getLogoUrl, handleLogoClick } from './logo';
 import { confirmDialog } from './utils';
 import { buildScorecardContent, buildOkrsContent } from './html';
 import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
@@ -43,7 +43,7 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
     <div class="top-bar-wrapper">
       <div class="top-bar">
         <div class="top-bar-left">
-          <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
+          ${getLogoUrl() ? `<img src="${getLogoUrl()}" class="top-bar-logo">` : `<button class="top-bar-logo-placeholder" id="btnAddLogo">+ Add Logo</button>`}
           <div class="top-bar-title">L10 Meeting Manager</div>
         </div>
         <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
@@ -75,6 +75,11 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
   // Logo click -> back to landing page
   document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
     location.hash = '#/';
+  });
+
+  // Add logo button
+  document.getElementById('btnAddLogo')?.addEventListener('click', () => {
+    handleLogoClick(() => renderAdminPortal(_selectedDept || undefined));
   });
 
   // Settings gear
