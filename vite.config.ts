@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/CompanyTools/',
+  base: '/L10Meeting/',
   build: {
     outDir: 'dist',
   },
