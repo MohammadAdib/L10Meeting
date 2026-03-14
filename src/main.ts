@@ -38,9 +38,10 @@ const now = new Date();
 (document.getElementById('metaDate') as HTMLInputElement).value = now.toISOString().split('T')[0];
 
 // ── Meeting start/stop ──
-const appLayout = document.querySelector<HTMLElement>('.app-layout')!;
-appLayout.classList.add('blurred');
-document.body.classList.add('no-scroll');
+const meetingTab = document.getElementById('tab-meeting')!;
+const sidebar = document.getElementById('sidebar')!;
+meetingTab.classList.add('blurred');
+sidebar.classList.add('blurred');
 
 let meetingInterval: ReturnType<typeof setInterval> | null = null;
 let meetingSeconds = 0;
@@ -54,8 +55,11 @@ function formatElapsed(secs: number): string {
 }
 
 function startMeeting() {
-  appLayout.classList.remove('blurred');
-  document.body.classList.remove('no-scroll');
+  meetingTab.classList.remove('blurred');
+  sidebar.classList.remove('blurred');
+  const actions = document.getElementById('topBarActions')!;
+  actions.style.opacity = '1';
+  actions.style.pointerEvents = '';
   // Fill start time
   const startNow = new Date();
   (document.getElementById('metaStart') as HTMLInputElement).value = startNow.toTimeString().slice(0, 5);
@@ -117,9 +121,8 @@ document.querySelectorAll<HTMLButtonElement>('.top-tab').forEach(btn => {
     document.getElementById(`tab-${tab}`)?.classList.add('active');
     btn.classList.add('active');
     // Show sidebar only on meeting tab
-    const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector<HTMLElement>('.main-content');
-    if (sidebar && mainContent) {
+    if (mainContent) {
       sidebar.style.display = tab === 'meeting' ? '' : 'none';
       mainContent.style.marginLeft = tab === 'meeting' ? '' : '0';
     }

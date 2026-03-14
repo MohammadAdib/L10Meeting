@@ -46,10 +46,7 @@ export function buildAppHTML(): string {
         <button class="top-tab" data-tab="okrs">OKRs</button>
       </div>
     </div>
-    <div class="meeting-control">
-      <button class="meeting-start-btn" id="btnMeetingStart">&#9654; Start Meeting</button>
-    </div>
-    <div class="top-bar-actions">
+    <div class="top-bar-actions" id="topBarActions" style="opacity:0;pointer-events:none">
       <button class="btn btn-outline" id="btnReset">Reset</button>
       <button class="btn btn-primary" id="btnExport">Export Excel</button>
     </div>
@@ -60,6 +57,9 @@ export function buildAppHTML(): string {
 <div class="app-layout">
   <!-- LEFT SIDEBAR -->
   <nav class="sidebar" id="sidebar">
+    <div class="meeting-control" id="meetingControl">
+      <button class="meeting-start-btn" id="btnMeetingStart">&#9654; Start Meeting</button>
+    </div>
     ${sidebarItems}
   </nav>
 
@@ -161,8 +161,9 @@ export function buildAppHTML(): string {
     <div class="section-card">
       <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
       <div class="section-body">
-        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
-          <div class="meta-field"><label>Quarter</label><input id="okrQuarter" placeholder="e.g. Q1 2026"></div>
+        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
+          <div class="meta-field"><label>Quarter</label><select id="okrQuarter">${[1,2,3,4].map(q => `<option${q === Math.ceil((new Date().getMonth()+1)/3) ? ' selected' : ''}>Q${q}</option>`).join('')}</select></div>
+          <div class="meta-field"><label>Year</label><select id="okrYear">${Array.from({length: 7}, (_, i) => { const y = new Date().getFullYear() - 2 + i; return `<option${y === new Date().getFullYear() ? ' selected' : ''}>${y}</option>`; }).join('')}</select></div>
           <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
           <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
         </div>
