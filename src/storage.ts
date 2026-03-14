@@ -150,11 +150,17 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     });
   }
 
-  // Rating values
+  // Rating values + star visuals
   const ratingValues = data.ratingValues as string[] | undefined;
   if (ratingValues) {
     const inputs = document.querySelectorAll<HTMLInputElement>('#ratingTable .rating-value');
-    ratingValues.forEach((v, i) => { if (i < inputs.length) inputs[i].value = v; });
+    ratingValues.forEach((v, i) => {
+      if (i >= inputs.length) return;
+      inputs[i].value = v;
+      const val = parseInt(v) || 0;
+      const stars = inputs[i].parentElement?.querySelectorAll('.rating-stars button');
+      if (stars) stars.forEach((s, si) => s.classList.toggle('active', si < val));
+    });
   }
 
   updateTodoCompletion();
@@ -175,7 +181,7 @@ export function markMeetingStarted(): void {
 }
 
 export function isMeetingActive(): boolean {
-  return _meetingStarted || _meetingDirty;
+  return _meetingStarted;
 }
 
 export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = false): void {
@@ -188,19 +194,24 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
   const container = document.getElementById('app');
   if (!container) return;
 
-  const trigger = () => {
+  const trigger = (delay = 3000) => {
     _meetingDirty = true;
     if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
-    updateAutoSaveStatus('Unsaved changes...');
-    _autoSaveTimer = setTimeout(() => doAutoSave(), 3000);
+    updateAutoSaveStatus('Saving...');
+    _autoSaveTimer = setTimeout(() => doAutoSave(), delay);
   };
 
-  container.addEventListener('input', trigger);
-  container.addEventListener('change', trigger);
+  container.addEventListener('input', () => trigger(3000));
+  container.addEventListener('change', () => trigger(3000));
+  container.addEventListener('click', () => trigger(5000));
 }
 
-export function cleanupAutoSave(): void {
+export async function cleanupAutoSave(): Promise<void> {
   if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  // Save on leave if there are unsaved changes
+  if (_meetingDirty || _meetingStarted) {
+    await doAutoSave();
+  }
   _autoSaveDept = '';
   _autoSaveMeetingId = '';
   _meetingDirty = false;

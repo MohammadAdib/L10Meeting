@@ -52,7 +52,7 @@ async function route() {
 
   // Clean up from any previous meeting view
   cleanupTimers();
-  cleanupAutoSave();
+  await cleanupAutoSave();
 
   const meetingMatch = hash.match(/#\/dept\/([^/]+)\/meeting\/(.+)/);
   const deptMatch = hash.match(/#\/dept\/([^/]+)$/);
@@ -91,12 +91,13 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   const isExisting = meetingId !== 'new';
 
   if (isExisting) {
-    // Existing meeting: no blur, no start/stop, show actions immediately
+    // Existing meeting: no blur, no start/stop, no section timers, show actions immediately
     const actions = document.getElementById('topBarActions')!;
     actions.style.opacity = '1';
     actions.style.pointerEvents = '';
     const controlDiv = document.querySelector('.meeting-control')!;
     controlDiv.innerHTML = '';
+    document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
   } else {
     // New meeting: blur until started
     meetingTab.classList.add('blurred');
@@ -259,6 +260,28 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
         scrollContainer.scrollTo({ top, behavior: 'smooth' });
       }
     });
+  });
+
+  // Update sidebar on scroll based on which section is most visible
+  let _scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  scrollContainer.addEventListener('scroll', () => {
+    if (_scrollTimer) clearTimeout(_scrollTimer);
+    _scrollTimer = setTimeout(() => {
+      const cards = document.querySelectorAll<HTMLElement>('.section-card[id^="sec-"]');
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      const containerMid = containerTop + scrollContainer.clientHeight / 3;
+      let closest: number | null = null;
+      let closestDist = Infinity;
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        const dist = Math.abs(rect.top - containerMid);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = parseInt(card.id.replace('sec-', ''));
+        }
+      });
+      if (closest !== null) setFocusedSection(closest);
+    }, 50);
   });
 
   // Default focus on section 1
