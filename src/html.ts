@@ -1,0 +1,164 @@
+import { SECTIONS } from './types';
+
+function sectionCard(num: number, title: string, timeLabel: string, bodyId: string, bodyHTML: string): string {
+  return `
+  <div class="section-card" id="sec-${num}">
+    <div class="section-header" data-section="${num}">
+      <h2><span class="section-num">${num}</span> ${title} <span class="chevron open" id="chev-${num}">&#9662;</span></h2>
+      <div class="section-timer">
+        <span class="timer-badge" id="timer-badge-${num}">${timeLabel}</span>
+        <button class="timer-btn timer-play" id="timer-btn-${num}" data-timer="${num}">&#9654;</button>
+        <button class="timer-btn timer-reset" data-timer-reset="${num}">&#8634;</button>
+      </div>
+    </div>
+    <div class="section-body" id="${bodyId}">${bodyHTML}</div>
+  </div>`;
+}
+
+function tableHTML(id: string, headers: string[]): string {
+  const ths = headers.map(h => {
+    if (h.startsWith('w:')) {
+      const [, w, label] = h.match(/w:(\d+):(.+)/)!;
+      return `<th style="width:${w}px">${label}</th>`;
+    }
+    return `<th>${h}</th>`;
+  }).join('');
+  return `<table class="data-table" id="${id}"><thead><tr>${ths}</tr></thead><tbody></tbody></table>`;
+}
+
+export function buildAppHTML(): string {
+  const navButtons = SECTIONS.map((s, i) =>
+    `<button class="${i === 0 ? 'active' : ''}" data-nav="${s.num}">${s.num}. ${s.name}</button>`
+  ).join('');
+
+  return `
+<div class="top-bar">
+  <h1>TITAN DYNAMICS <span>— L10 MEETING</span></h1>
+  <div class="top-bar-actions">
+    <button class="btn btn-outline" id="btnSave">Save Draft</button>
+    <button class="btn btn-outline" id="btnLoad">Load Draft</button>
+    <button class="btn btn-outline" id="btnReset">Reset</button>
+    <button class="btn btn-primary" id="btnExport">Export PDF</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="meeting">L10 Meeting</button>
+    <button class="tab-btn" data-tab="scorecard">Scorecard</button>
+    <button class="tab-btn" data-tab="okrs">OKRs</button>
+  </div>
+
+  <!-- MEETING TAB -->
+  <div id="tab-meeting" class="tab-content active">
+    <div class="progress-bar"><div class="progress-fill" id="meetingProgress" style="width:0%"></div></div>
+    <div class="section-nav" id="sectionNav">${navButtons}</div>
+
+    <div class="meta-grid">
+      <div class="meta-field"><label>Team</label><input id="metaTeam" placeholder="e.g. Leadership Team"></div>
+      <div class="meta-field"><label>Date</label><input id="metaDate" type="date"></div>
+      <div class="meta-field"><label>Facilitator</label><input id="metaFacilitator" placeholder="Name"></div>
+      <div class="meta-field"><label>Scribe</label><input id="metaScribe" placeholder="Name"></div>
+      <div class="meta-field"><label>Start Time</label><input id="metaStart" type="time"></div>
+      <div class="meta-field"><label>End Time</label><input id="metaEnd" type="time"></div>
+    </div>
+
+    ${sectionCard(1, 'SEGUE', '5:00', 'body-1', `
+      <p class="section-desc">Each person shares one personal win and one professional win to open the meeting.</p>
+      <div class="segue-grid">
+        <div class="segue-box"><h3>Personal Good News</h3><textarea id="seguePersonal" placeholder="Share personal wins..."></textarea></div>
+        <div class="segue-box"><h3>Professional Good News</h3><textarea id="segueProfessional" placeholder="Share professional wins..."></textarea></div>
+      </div>
+    `)}
+
+    ${sectionCard(2, 'SCORECARD REVIEW', '5:00', 'body-2', `
+      <p class="section-desc">Review each measurable. Off-track items → add to IDS.</p>
+      ${tableHTML('scorecardTable', ['Measurable / KPI', 'Owner', 'Goal', 'Actual', 'w:110:Status', 'Notes', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecard">+ Add Measurable</button>
+    `)}
+
+    ${sectionCard(3, 'OKR REVIEW', '5:00', 'body-3', `
+      <p class="section-desc">Report On Track / Off Track for each OKR. Off-track items → add to IDS.</p>
+      ${tableHTML('okrReviewTable', ['OKR / Rock Description', 'Owner', 'Due Date', 'w:110:Status', 'w:70:% Done', 'Notes', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrReview">+ Add OKR</button>
+    `)}
+
+    ${sectionCard(4, 'CUSTOMER / EMPLOYEE HEADLINES', '5:00', 'body-4', `
+      <p class="section-desc">Share good or bad news about customers or employees. Drop issues into IDS.</p>
+      ${tableHTML('headlinesTable', ['Headline', 'w:100:Type', 'Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddHeadline">+ Add Headline</button>
+    `)}
+
+    ${sectionCard(5, 'TO-DO LIST REVIEW', '5:00', 'body-5', `
+      <p class="section-desc">Review last week's 7-day commitments. Done / Not Done. Incomplete items → IDS.</p>
+      ${tableHTML('todoReviewTable', ["Last Week's To-Do", 'Owner', 'Due Date', 'w:110:Status', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddTodoReview">+ Add To-Do</button>
+      <div class="completion-stat">
+        <span class="stat-num" id="todoCompletionNum">0 / 0</span>
+        <span class="stat-label">Completion Rate</span>
+      </div>
+    `)}
+
+    ${sectionCard(6, 'IDS — IDENTIFY, DISCUSS, SOLVE', '60:00', 'body-6', `
+      <p class="section-desc">IDENTIFY — Build the Issues List (vote to prioritize top 3 before discussing)</p>
+      ${tableHTML('issuesListTable', ['Issue / Obstacle', 'Raised By', 'w:90:Priority', 'w:110:Status', 'w:80:Time Est.', 'w:90:Next Mtg?', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddIssue">+ Add Issue</button>
+      <h3 style="margin:24px 0 12px;font-size:14px;color:var(--text-dim);">DISCUSS & SOLVE — IDS each issue completely before moving to the next</h3>
+      <div id="idsIssuesContainer"></div>
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddIDSIssue">+ Add Issue Detail Block</button>
+    `)}
+
+    ${sectionCard(7, 'CONCLUDE', '5:00', 'body-7', `
+      <h3 class="sub-heading" style="margin-top:14px;">New To-Do List — This Week's Commitments</h3>
+      ${tableHTML('newTodoTable', ['To-Do', 'Owner', 'Due Date', 'w:90:Priority', 'w:110:Status', 'Notes', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddNewTodo">+ Add To-Do</button>
+
+      <h3 class="sub-heading sub-heading-spaced">Cascading Messages — What needs to be shared?</h3>
+      ${tableHTML('cascadingTable', ['Message', 'To Whom', 'By When', 'By Whom', 'Channel', 'w:80:Done?', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddCascading">+ Add Message</button>
+
+      <h3 class="sub-heading sub-heading-spaced">Meeting Rating — Rate 1-10 (discuss anything below 8)</h3>
+      ${tableHTML('ratingTable', ['Team Member', 'w:200:Rating (1-10)', 'Quick Comment', 'w:30:'])}
+      <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddRating">+ Add Member</button>
+      <div class="completion-stat" style="margin-top:12px;">
+        <span class="stat-num" id="avgRating">—</span>
+        <span class="stat-label">Average Rating</span>
+      </div>
+    `)}
+  </div>
+
+  <!-- SCORECARD TAB -->
+  <div id="tab-scorecard" class="tab-content">
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>SCORECARD TRACKER (Rolling 13 Weeks)</h2></div>
+      <div class="section-body">
+        <p class="section-desc">Track weekly actuals below. Use color-coded status to flag off-track items.</p>
+        <div style="overflow-x:auto;">
+        ${tableHTML('scorecardFullTable', ['Measurable / KPI', 'Owner', 'Goal', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5', 'Wk 6', 'Wk 7', 'Wk 8', 'Wk 9', 'Wk 10', 'Wk 11', 'Wk 12', 'Wk 13', 'w:30:'])}
+        </div>
+        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecardFull">+ Add Measurable</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OKR TAB -->
+  <div id="tab-okrs" class="tab-content">
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
+      <div class="section-body">
+        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px;">
+          <div class="meta-field"><label>Quarter</label><input id="okrQuarter" placeholder="e.g. Q1 2026"></div>
+          <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
+          <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
+        </div>
+        <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
+        ${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}
+        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
+        <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast"></div>`;
+}

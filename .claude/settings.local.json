@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && python -c \"\nimport openpyxl, sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\('L10_Meeting_Template.xlsx', data_only=True\\)\nfor sheet_name in wb.sheetnames:\n    ws = wb[sheet_name]\n    print\\(f'=== Sheet: {sheet_name} ==='\\)\n    for row in ws.iter_rows\\(min_row=1, max_row=ws.max_row, max_col=ws.max_column, values_only=False\\):\n        vals = []\n        for cell in row:\n            if cell.value is not None:\n                vals.append\\(f'{cell.coordinate}: {repr\\(cell.value\\)}'\\)\n        if vals:\n            print\\('  '.join\\(vals\\)\\)\n    print\\(\\)\n\")",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && gh auth login --web 2>&1 | head -5)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && python -c \"\nimport openpyxl, sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\('L10_Meeting_Template.xlsx'\\)\nws = wb['L10 Meeting']\ncolors = set\\(\\)\nfor row in ws.iter_rows\\(min_row=1, max_row=50, max_col=6\\):\n    for cell in row:\n        if cell.fill and cell.fill.fgColor and cell.fill.fgColor.rgb and cell.fill.fgColor.rgb != '00000000':\n            colors.add\\(f'{cell.coordinate}: fill={cell.fill.fgColor.rgb} val={cell.value}'\\)\n        if cell.font and cell.font.color and cell.font.color.rgb:\n            colors.add\\(f'{cell.coordinate}: font={cell.font.color.rgb} val={cell.value}'\\)\nfor c in sorted\\(colors\\):\n    print\\(c\\)\n\")",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm create vite@latest . -- --template vanilla-ts 2>&1 | tail -5)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && echo y | npm create vite@latest . -- --template vanilla-ts 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm create vite@latest l10app -- --template vanilla-ts 2>&1)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && cp -r l10app/* . && cp l10app/.gitignore . 2>/dev/null; cp l10app/tsconfig.json . 2>/dev/null; rm -rf l10app)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install 2>&1 | tail -3)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm install html2pdf.js 2>&1 | tail -3)",
+      "Bash(cd \"C:/Users/MohammadAdib/Documents/GitHub/CompanyTools\" && npm run build 2>&1)"
+    ]
+  }
+}
