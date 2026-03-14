@@ -121,7 +121,8 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
       app.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
       item.classList.add('active');
       _selectedDept = dept;
-      location.hash = `#/dept/${encodeURIComponent(dept)}`;
+      // Update URL without triggering the router (which would full-reload the page)
+      history.replaceState(null, '', `#/dept/${encodeURIComponent(dept)}`);
       loadDepartmentContent(dept);
     });
   });
@@ -491,7 +492,9 @@ export function renderAboutPage(): void {
           <div class="top-bar-title">L10 Meeting Manager</div>
         </div>
         <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
-          <a class="btn btn-outline" href="#/" style="text-decoration:none">&larr; Back</a>
+          <button class="settings-btn" id="btnAboutClose" title="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -546,8 +549,11 @@ export function renderAboutPage(): void {
     </div>
   `;
 
-  // Logo click → home
+  // Logo / close → home
   document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
+    location.hash = '#/';
+  });
+  document.getElementById('btnAboutClose')?.addEventListener('click', () => {
     location.hash = '#/';
   });
 

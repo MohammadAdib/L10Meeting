@@ -181,16 +181,6 @@ async function readExcelData(dirHandle: FileSystemDirectoryHandle, fileName: str
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buffer);
 
-    // Try _data sheet first (lossless)
-    const dataWs = wb.getWorksheet('_data');
-    if (dataWs) {
-      const raw = dataWs.getCell('A1').value;
-      if (raw && typeof raw === 'string') {
-        try { return JSON.parse(raw); } catch { /* fall through */ }
-      }
-    }
-
-    // Fallback: read from L10 Meeting sheet
     const ws = wb.getWorksheet('L10 Meeting');
     if (ws) return readWorkbookToJson(wb, ws);
     return null;
@@ -221,9 +211,9 @@ async function writeExcelData(dirHandle: FileSystemDirectoryHandle, fileName: st
   const ws = wb.getWorksheet('L10 Meeting');
   if (ws) writeJsonToWorkbook(wb, ws, data);
 
-  let dataWs = wb.getWorksheet('_data');
-  if (!dataWs) dataWs = wb.addWorksheet('_data');
-  dataWs.getCell('A1').value = JSON.stringify(data);
+  // Remove legacy _data sheet if present
+  const dataWs = wb.getWorksheet('_data');
+  if (dataWs) wb.removeWorksheet(dataWs.id);
 
   const buffer = await wb.xlsx.writeBuffer();
   const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
@@ -435,17 +425,15 @@ export async function loadMeetingRatings(deptName: string): Promise<{ id: string
         const buffer = await file.arrayBuffer();
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.load(buffer);
-        const dataWs = wb.getWorksheet('_data');
-        if (dataWs) {
-          const raw = dataWs.getCell('A1').value;
-          if (raw && typeof raw === 'string') {
-            const data = JSON.parse(raw);
-            if (data.lastSaved) lastSaved = data.lastSaved;
-            const vals = (data.ratingValues || []) as string[];
-            let sum = 0, count = 0;
-            vals.forEach((v: string) => { const n = parseInt(v); if (n > 0) { sum += n; count++; } });
-            if (count > 0) avgRating = sum / count;
+        const ws = wb.getWorksheet('L10 Meeting');
+        if (ws) {
+          let sum = 0, count = 0;
+          for (let r = 192; r <= 201; r++) {
+            const v = ws.getCell(`B${r}`).value;
+            const n = typeof v === 'number' ? v : parseInt(String(v || ''));
+            if (n > 0) { sum += n; count++; }
           }
+          if (count > 0) avgRating = sum / count;
         }
       } catch { /* skip */ }
 

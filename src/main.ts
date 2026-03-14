@@ -95,6 +95,33 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // ── Pre-fill team name with department ──
   (document.getElementById('metaTeam') as HTMLInputElement).value = deptName;
 
+  // ── Duration helper ──
+  function updateDuration(): void {
+    const controlDiv = document.querySelector('.meeting-control');
+    if (!controlDiv) return;
+    const startVal = (document.getElementById('metaStart') as HTMLInputElement)?.value;
+    const endVal = (document.getElementById('metaEnd') as HTMLInputElement)?.value;
+    if (!startVal || !endVal) {
+      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">&nbsp;</span>`;
+      return;
+    }
+    const sp = startVal.split(':').map(Number);
+    const ep = endVal.split(':').map(Number);
+    if (sp.length < 2 || ep.length < 2 || sp.some(isNaN) || ep.some(isNaN)) {
+      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">&nbsp;</span>`;
+      return;
+    }
+    const totalMins = (ep[0] * 60 + ep[1]) - (sp[0] * 60 + sp[1]);
+    if (totalMins <= 0) {
+      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">&nbsp;</span>`;
+      return;
+    }
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
+    controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
+  }
+
   // ── Meeting start/stop ──
   const meetingTab = document.getElementById('tab-meeting')!;
   const sidebar = document.getElementById('sidebar')!;
@@ -169,9 +196,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       markMeetingStopped();
       const endNow = new Date();
       (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
-
-      const controlDiv = document.querySelector('.meeting-control')!;
-      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${formatElapsed(meetingSeconds)}</span>`;
+      updateDuration();
       forceSave();
     }
 
@@ -271,24 +296,32 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── If loading existing meeting, populate data ──
   if (meetingId !== 'new') {
-    const data = await fs.getMeetingData(deptName, meetingId);
+    let data: Record<string, any> | null = null;
+    let parseError = false;
+    try {
+      data = await fs.getMeetingData(deptName, meetingId);
+    } catch {
+      parseError = true;
+    }
+
+    if (parseError || (data !== null && Object.keys(data).length === 0)) {
+      // File exists but couldn't be parsed
+      const container = document.querySelector('.main-content .container')!;
+      container.innerHTML = `
+        <div class="parse-error">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h2>Unable to render this meeting</h2>
+          <p>The Excel file could not be parsed. It may have been modified in a way that doesn't match the expected L10 template layout.</p>
+          <a class="btn btn-outline" href="#/dept/${encodeURIComponent(deptName)}" style="text-decoration:none;margin-top:8px">&larr; Back to department</a>
+        </div>`;
+      return;
+    }
+
     if (data) {
       loadMeetingData(data);
-
-      const startVal = (document.getElementById('metaStart') as HTMLInputElement).value;
-      const endVal = (document.getElementById('metaEnd') as HTMLInputElement).value;
-      if (startVal && endVal) {
-        const [sh, sm] = startVal.split(':').map(Number);
-        const [eh, em] = endVal.split(':').map(Number);
-        const totalMins = (eh * 60 + em) - (sh * 60 + sm);
-        if (totalMins >= 0) {
-          const h = Math.floor(totalMins / 60);
-          const m = totalMins % 60;
-          const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
-          const controlDiv = document.querySelector('.meeting-control')!;
-          controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
-        }
-      }
+      updateDuration();
     } else {
       location.replace('#/');
       return;
@@ -299,6 +332,10 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // For new meetings, defer creating on server until first save
   setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new');
   setupScorecardOkrSync();
+
+  // ── Recalc duration on time changes ──
+  document.getElementById('metaStart')?.addEventListener('change', updateDuration);
+  document.getElementById('metaEnd')?.addEventListener('change', updateDuration);
 
   // ── Event Delegation ──
 

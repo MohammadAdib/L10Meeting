@@ -18,10 +18,10 @@ export function showSettingsMenu(anchor: HTMLElement): void {
       <span class="settings-folder-name">${folderName || 'None'}</span>
     </div>
     <button class="settings-menu-item" id="settingsChangeFolder">Change folder</button>
+    <button class="settings-menu-item settings-danger" id="settingsForgetFolder">Forget folder</button>
+    <div class="settings-divider"></div>
     <button class="settings-menu-item" id="settingsChangeLogo">${hasLogo ? 'Change logo' : 'Add logo'}</button>
     ${hasLogo ? `<button class="settings-menu-item settings-danger" id="settingsRemoveLogo">Remove logo</button>` : ''}
-    <div class="settings-divider"></div>
-    <button class="settings-menu-item settings-danger" id="settingsForgetFolder">Forget folder</button>
   `;
 
   const rect = anchor.getBoundingClientRect();
