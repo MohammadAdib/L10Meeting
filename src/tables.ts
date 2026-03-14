@@ -1,16 +1,30 @@
 import { statusSelect, deleteBtn } from './utils';
 
 let idsIssueCount = 0;
+let _people: string[] = [];
 
 export function resetIdsIssueCount(): void {
   idsIssueCount = 0;
+}
+
+/** Set the people list used for person dropdowns */
+export function setPeople(people: string[]): void {
+  _people = people;
+}
+
+/** Build a person <select> dropdown from the department people list */
+function personSelect(): string {
+  const opts = [`<option value=""></option>`]
+    .concat(_people.map(p => `<option value="${p}">${p}</option>`))
+    .join('');
+  return `<select class="person-select">${opts}</select>`;
 }
 
 export function addScorecardRow(name = ''): void {
   const tb = document.querySelector('#scorecardTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input value="${name}" placeholder="KPI name"></td><td><input placeholder="Owner"></td><td><input placeholder="Goal"></td><td><input placeholder="Actual"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input value="${name}" placeholder="KPI name"></td><td>${personSelect()}</td><td><input placeholder="Goal"></td><td><input placeholder="Actual"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -18,7 +32,7 @@ export function addOkrReviewRow(name = ''): void {
   const tb = document.querySelector('#okrReviewTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input value="${name}" placeholder="OKR description"></td><td><input placeholder="Owner"></td><td><input type="date"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:60px"></td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input value="${name}" placeholder="OKR description"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:60px"></td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -26,7 +40,7 @@ export function addHeadlineRow(): void {
   const tb = document.querySelector('#headlinesTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Headline"></td><td>${statusSelect(['', 'Customer', 'Employee'])}</td><td><input placeholder="Name"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Headline"></td><td>${statusSelect(['', 'Customer', 'Employee'])}</td><td>${personSelect()}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -34,7 +48,7 @@ export function addTodoReviewRow(): void {
   const tb = document.querySelector('#todoReviewTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="To-do item"></td><td><input placeholder="Owner"></td><td><input type="date"></td><td>${statusSelect(['', 'Done', 'Not Done'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="To-do item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
   tr.querySelector('select')?.addEventListener('change', () => window.__updateTodoCompletion());
 }
@@ -54,7 +68,7 @@ export function addIssueRow(): void {
   const tb = document.querySelector('#issuesListTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Issue / obstacle"></td><td><input placeholder="Name"></td><td>${statusSelect(['', '1 - High', '2 - Medium', '3 - Low'])}</td><td>${statusSelect(['', 'New', 'In Progress', 'Resolved', 'Tabled'])}</td><td><input placeholder="e.g. 10 min" style="width:70px"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Issue / obstacle"></td><td>${personSelect()}</td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Solved', 'Next Meeting', 'Dropped'])}</td><td><input placeholder="e.g. 10 min" style="width:70px"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -89,7 +103,7 @@ export function addIDSTodoRow(issueN: number): void {
   const tb = document.querySelector(`#idsTodo-${issueN} tbody`);
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Action item"></td><td><input placeholder="Owner"></td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Not Started', 'In Progress', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Not Started', 'In Progress', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -97,7 +111,7 @@ export function addNewTodoRow(): void {
   const tb = document.querySelector('#newTodoTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Action item"></td><td><input placeholder="Owner"></td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Not Started', 'In Progress', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Not Started', 'In Progress', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -105,7 +119,7 @@ export function addCascadingRow(): void {
   const tb = document.querySelector('#cascadingTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Message"></td><td><input placeholder="To whom"></td><td><input type="date"></td><td><input placeholder="By whom"></td><td><input placeholder="e.g. Slack, Email"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Message"></td><td>${personSelect()}</td><td><input type="date"></td><td>${personSelect()}</td><td><input placeholder="e.g. Slack, Email"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -116,7 +130,7 @@ export function addRatingRow(): void {
   const stars = Array.from({ length: 10 }, (_, i) =>
     `<button onclick="window.__setRating(this,${i + 1})">&#9733;</button>`
   ).join('');
-  tr.innerHTML = `<td><input placeholder="Name"></td><td><div class="rating-stars">${stars}</div><input type="hidden" class="rating-value" value="0"></td><td><input placeholder="Comment"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td>${personSelect()}</td><td><div class="rating-stars">${stars}</div><input type="hidden" class="rating-value" value="0"></td><td><input placeholder="Comment"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -146,7 +160,7 @@ export function addScorecardFullRow(name = ''): void {
   const tr = document.createElement('tr');
   let weeks = '';
   for (let i = 0; i < 13; i++) weeks += `<td><input placeholder="-" style="width:50px;text-align:center"></td>`;
-  tr.innerHTML = `<td><input value="${name}" placeholder="KPI name"></td><td><input placeholder="Owner" style="width:80px"></td><td><input placeholder="Goal" style="width:60px"></td>${weeks}<td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input value="${name}" placeholder="KPI name"></td><td>${personSelect()}</td><td><input placeholder="Goal" style="width:60px"></td>${weeks}<td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -156,7 +170,7 @@ export function addOkrFullRow(name = '', num?: number): void {
   if (!tb) return;
   const n = num ?? tb.children.length + 1;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="width:30px;text-align:center;color:var(--text-muted)">${n}</td><td><input value="${name}" placeholder="OKR description"></td><td><input placeholder="Owner"></td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td style="width:30px;text-align:center;color:var(--text-muted)">${n}</td><td><input value="${name}" placeholder="OKR description"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'At Risk'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -165,7 +179,7 @@ export function addKeyResultRow(okrN: number, num?: number): void {
   if (!tb) return;
   const n = num ?? tb.children.length + 1;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="width:30px;text-align:center;color:var(--text-muted)">${n}</td><td><input placeholder="Key result"></td><td><input placeholder="Owner"></td><td><input placeholder="Target"></td><td><input placeholder="Actual"></td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td style="width:30px;text-align:center;color:var(--text-muted)">${n}</td><td><input placeholder="Key result"></td><td>${personSelect()}</td><td><input placeholder="Target"></td><td><input placeholder="Actual"></td><td><input type="number" min="0" max="100" placeholder="%" style="width:55px"></td><td>${statusSelect(['', 'On Track', 'Off Track', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 

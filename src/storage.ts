@@ -180,6 +180,10 @@ export function markMeetingStarted(): void {
   _meetingDirty = true;
 }
 
+export function markMeetingStopped(): void {
+  _meetingStarted = false;
+}
+
 export function isMeetingActive(): boolean {
   return _meetingStarted;
 }
@@ -197,7 +201,6 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
   const trigger = (delay = 3000) => {
     _meetingDirty = true;
     if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
-    updateAutoSaveStatus('Saving...');
     _autoSaveTimer = setTimeout(() => doAutoSave(), delay);
   };
 
@@ -222,7 +225,6 @@ export async function cleanupAutoSave(): Promise<void> {
 async function doAutoSave(): Promise<void> {
   if (!_autoSaveDept) return;
   if (!_meetingStarted && !_meetingDirty) return;
-  updateAutoSaveStatus('Saving...');
   try {
     const data = gatherMeetingData();
     data.lastSaved = new Date().toISOString();
@@ -247,15 +249,21 @@ async function doAutoSave(): Promise<void> {
       });
       if (!res.ok) throw new Error('Save failed');
     }
-    updateAutoSaveStatus('Saved');
+    showAutoSaved();
   } catch {
-    updateAutoSaveStatus('Save failed');
+    /* silent */
   }
 }
 
-function updateAutoSaveStatus(text: string): void {
+let _savedFadeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showAutoSaved(): void {
   const el = document.getElementById('autosaveStatus');
-  if (el) el.textContent = text;
+  if (!el) return;
+  if (_savedFadeTimer) clearTimeout(_savedFadeTimer);
+  el.textContent = 'Saved';
+  el.style.opacity = '1';
+  _savedFadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 3000);
 }
 
 /** Force a save then open the Excel file on the server */

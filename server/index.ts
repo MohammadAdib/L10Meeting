@@ -15,6 +15,33 @@ fs.mkdirSync(dataDir, { recursive: true });
 fs.mkdirSync(path.join(dataDir, 'Departments'), { recursive: true });
 
 const app = express();
+
+// Import XLSX — must be registered before global JSON parser to preserve raw body
+app.post('/api/departments/:name/meetings/import', express.raw({ type: '*/*', limit: '50mb' }), (req, res) => {
+  try {
+    if (!req.body || !Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: 'No file data received' }); return;
+    }
+    const deptName = req.params.name;
+    const dir = path.join(deptDir(deptName), 'meetings');
+    fs.mkdirSync(dir, { recursive: true });
+
+    const today = new Date().toISOString().split('T')[0];
+    let baseName = `L10_${deptName}_${today}`;
+    let fileName = `${baseName}.xlsx`;
+    let suffix = 1;
+    while (fs.existsSync(path.join(dir, fileName))) {
+      fileName = `${baseName}-${suffix}.xlsx`;
+      suffix++;
+    }
+    const id = fileName.replace('.xlsx', '');
+    fs.writeFileSync(path.join(dir, fileName), req.body);
+    res.json({ id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use(express.json({ limit: '10mb' }));
 
 // Serve static files
@@ -110,13 +137,32 @@ function writeTable(ws: ExcelJS.Worksheet, rows: string[][] | undefined, startRo
   });
 }
 
+/** Extract a cell value as a plain string, handling formulas and dates */
+function cellStr(ws: ExcelJS.Worksheet, ref: string): string {
+  const v = ws.getCell(ref).value;
+  if (v === null || v === undefined) return '';
+  // Formula objects: { formula, result }
+  if (typeof v === 'object' && 'result' in (v as any)) {
+    const r = (v as any).result;
+    if (r === null || r === undefined) return '';
+    if (r instanceof Date) return formatDateCell(r);
+    return String(r);
+  }
+  // Date objects
+  if (v instanceof Date) return formatDateCell(v);
+  return String(v);
+}
+
+function formatDateCell(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /** Read meeting data from the "L10 Meeting" worksheet into JSON */
 function readWorkbookToJson(ws: ExcelJS.Worksheet): Record<string, any> {
-  const c = (ref: string): string => {
-    const v = ws.getCell(ref).value;
-    if (v === null || v === undefined) return '';
-    return String(v);
-  };
+  const c = (ref: string) => cellStr(ws, ref);
 
   const data: Record<string, any> = {
     meta: {
@@ -131,28 +177,42 @@ function readWorkbookToJson(ws: ExcelJS.Worksheet): Record<string, any> {
   data.headlinesTable = readTable(ws, 37, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.todoReviewTable = readTable(ws, 47, 7, ['A', 'B', 'C', 'D', 'E', 'F']);
   data.issuesListTable = readTable(ws, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
-  data.newTodoTable = readTable(ws, 171, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
-  data.cascadingTable = readTable(ws, 184, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
 
-  // IDS blocks
-  const issueStarts = [77, 86, 95, 104, 113, 122, 131, 140, 149, 158];
+  // Detect IDS section offset: check if "Issue:" label is at A78 (our format) or A79 (external +1)
+  const idsOffset = c('A79').startsWith('Issue:') ? 1 : 0;
+
+  // IDS blocks (9 rows apart)
   const idsBlocks: any[] = [];
-  for (const base of issueStarts) {
+  for (let bi = 0; bi < 10; bi++) {
+    const base = 77 + idsOffset + bi * 9;
+    // Fields are at base+1 (Issue:), base+2 (Root Cause:), base+3 (Solution:)
     const fields = [c(`B${base + 1}`), c(`B${base + 2}`), c(`B${base + 3}`)];
-    if (!fields[0] && !fields[1] && !fields[2]) continue;
-    idsBlocks.push({ fields, todos: readTable(ws, base + 4, 5, ['A', 'B', 'C', 'D', 'E', 'F']) });
+    // Skip placeholder text
+    const isPlaceholder = (s: string) => !s || s.startsWith('Describe the real') || s.startsWith("Ask 'why?'") || s.startsWith('Agreed solution');
+    if (isPlaceholder(fields[0]) && isPlaceholder(fields[1]) && isPlaceholder(fields[2])) continue;
+    // Todos start at base+4 (our format) or base+5 (external, has header row)
+    const todoStart = idsOffset ? base + 5 : base + 4;
+    idsBlocks.push({ fields, todos: readTable(ws, todoStart, 5, ['A', 'B', 'C', 'D', 'E', 'F']) });
   }
   data.idsBlocks = idsBlocks;
+
+  // Conclude section (offset by same amount)
+  const newTodoStart = 171 + idsOffset;
+  const cascadingStart = 184 + idsOffset;
+  const ratingStart = 192 + idsOffset;
+
+  data.newTodoTable = readTable(ws, newTodoStart, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
+  data.cascadingTable = readTable(ws, cascadingStart, 6, ['A', 'B', 'C', 'D', 'E', 'F']);
 
   // Rating
   const ratingTable: string[][] = [];
   const ratingValues: string[] = [];
-  for (let i = 0; i < 6; i++) {
-    const r = 192 + i;
+  for (let i = 0; i < 10; i++) {
+    const r = ratingStart + i;
     const name = c(`A${r}`);
     const rating = c(`B${r}`);
     const comment = c(`C${r}`);
-    if (!name && !rating && !comment) continue;
+    if (!name || name.startsWith('Average')) break;
     ratingTable.push([name, '', comment]);
     ratingValues.push(rating || '0');
   }
@@ -166,11 +226,8 @@ function readTable(ws: ExcelJS.Worksheet, startRow: number, maxRows: number, col
   const rows: string[][] = [];
   for (let i = 0; i < maxRows; i++) {
     const r = startRow + i;
-    const row = cols.map(col => {
-      const v = ws.getCell(`${col}${r}`).value;
-      if (v === null || v === undefined) return '';
-      return String(v);
-    });
+    const row = cols.map(col => cellStr(ws, `${col}${r}`));
+    // Skip empty rows and header rows (contain column labels like "To-Do", "Owner", etc.)
     if (row.every(v => !v)) continue;
     rows.push(row);
   }
@@ -278,21 +335,58 @@ app.put('/api/departments/:name/people', (req, res) => {
 // ── Meeting APIs (Excel-based) ──
 
 // List meetings
-app.get('/api/departments/:name/meetings', (req, res) => {
+app.get('/api/departments/:name/meetings', async (req, res) => {
   try {
     const dir = path.join(deptDir(req.params.name), 'meetings');
     if (!fs.existsSync(dir)) { res.json([]); return; }
-    const files = fs.readdirSync(dir)
-      .filter(f => f.endsWith('.xlsx') && !f.startsWith('~$'))
-      .map(f => {
-        const stat = fs.statSync(path.join(dir, f));
-        const id = f.replace('.xlsx', '');
-        const dateMatch = f.match(/(\d{4}-\d{2}-\d{2}(-\d+)?)/);
-        const date = dateMatch ? dateMatch[1] : id;
-        return { id, date, lastSaved: stat.mtime.toISOString() };
-      })
-      .sort((a, b) => b.date.localeCompare(a.date));
-    res.json(files);
+    const fileNames = fs.readdirSync(dir)
+      .filter(f => f.endsWith('.xlsx') && !f.startsWith('~$'));
+
+    const results = await Promise.all(fileNames.map(async f => {
+      const filePath = path.join(dir, f);
+      const stat = fs.statSync(filePath);
+      const id = f.replace('.xlsx', '');
+      const dateMatch = f.match(/(\d{4}-\d{2}-\d{2}(-\d+)?)/);
+      const date = dateMatch ? dateMatch[1] : id;
+
+      // Read avg rating from file
+      let avgRating = 0;
+      try {
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.readFile(filePath);
+        const dataWs = wb.getWorksheet('_data');
+        if (dataWs) {
+          const raw = dataWs.getCell('A1').value;
+          if (raw && typeof raw === 'string') {
+            const data = JSON.parse(raw);
+            const vals = (data.ratingValues || []) as string[];
+            let sum = 0, count = 0;
+            vals.forEach((v: string) => { const n = parseInt(v); if (n > 0) { sum += n; count++; } });
+            if (count > 0) avgRating = sum / count;
+          }
+        }
+        if (!avgRating) {
+          // Fallback: read from worksheet
+          const ws = wb.getWorksheet('L10 Meeting');
+          if (ws) {
+            const idsOffset = cellStr(ws, 'A79').startsWith('Issue:') ? 1 : 0;
+            const ratingStart = 192 + idsOffset;
+            let sum = 0, count = 0;
+            for (let i = 0; i < 10; i++) {
+              const v = cellStr(ws, `B${ratingStart + i}`);
+              const n = parseInt(v);
+              if (n > 0) { sum += n; count++; }
+            }
+            if (count > 0) avgRating = sum / count;
+          }
+        }
+      } catch { /* skip rating read errors */ }
+
+      return { id, date, lastSaved: stat.mtime.toISOString(), avgRating };
+    }));
+
+    results.sort((a, b) => b.date.localeCompare(a.date));
+    res.json(results);
   } catch {
     res.json([]);
   }

@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange } from './utils';
-import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, isMeetingActive, cleanupAutoSave, openInExcel } from './storage';
+import { resetAll, loadMeetingData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -10,7 +10,7 @@ import {
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, setRating, updateTodoCompletion, updateAvgRating,
   addScorecardFullRow, addOkrFullRow, addKeyResultRow, buildKeyResultBlocks,
-  resetIdsIssueCount,
+  resetIdsIssueCount, setPeople,
 } from './tables';
 
 // ── Expose globals for inline onclick handlers ──
@@ -143,6 +143,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
     function stopMeeting() {
       if (meetingInterval) clearInterval(meetingInterval);
+      markMeetingStopped();
       const endNow = new Date();
       (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
 
@@ -156,6 +157,26 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // ── Init timers ──
   initTimers();
 
+  // ── Fetch department people for dropdowns ──
+  let people: string[] = [];
+  try {
+    const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/people`);
+    if (res.ok) people = await res.json();
+  } catch { /* empty */ }
+  setPeople(people);
+
+  // ── Convert meta Facilitator/Scribe to people dropdowns ──
+  for (const id of ['metaFacilitator', 'metaScribe']) {
+    const input = document.getElementById(id) as HTMLInputElement | null;
+    if (!input) continue;
+    const sel = document.createElement('select');
+    sel.id = id;
+    sel.className = 'person-select';
+    sel.innerHTML = `<option value=""></option>` +
+      people.map(p => `<option value="${p}">${p}</option>`).join('');
+    input.replaceWith(sel);
+  }
+
   // ── Populate default rows ──
   DEFAULT_MEASURABLES.forEach(m => addScorecardRow(m));
   for (let i = 0; i < 6; i++) addOkrReviewRow();
@@ -167,18 +188,12 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   for (let i = 0; i < 3; i++) addCascadingRow();
 
   // ── Pre-fill rating table with department people ──
-  let people: string[] = [];
-  try {
-    const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/people`);
-    if (res.ok) people = await res.json();
-  } catch { /* empty */ }
-
   if (people.length > 0) {
     people.forEach(() => addRatingRow());
-    // Fill in names
-    const nameInputs = document.querySelectorAll<HTMLInputElement>('#ratingTable tbody tr input[placeholder="Name"]');
+    // Pre-select each person in the rating name dropdown
+    const selects = document.querySelectorAll<HTMLSelectElement>('#ratingTable tbody tr .person-select');
     people.forEach((name, i) => {
-      if (i < nameInputs.length) nameInputs[i].value = name;
+      if (i < selects.length) selects[i].value = name;
     });
   } else {
     for (let i = 0; i < 5; i++) addRatingRow();
@@ -195,8 +210,15 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       if (res.ok) {
         const data = await res.json();
         loadMeetingData(data);
+      } else {
+        // Meeting no longer exists — go home and clear history
+        location.replace('#/');
+        return;
       }
-    } catch { /* new meeting */ }
+    } catch {
+      location.replace('#/');
+      return;
+    }
   }
 
   // ── Set up auto-save ──

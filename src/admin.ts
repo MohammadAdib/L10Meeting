@@ -128,7 +128,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
   content.style.animation = 'fadeSlideRight .3s ease forwards';
 
   let people: string[] = [];
-  let meetings: { id: string; date: string; lastSaved: string }[] = [];
+  let meetings: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
 
   try {
     const [pRes, mRes] = await Promise.all([
@@ -159,11 +159,24 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
   `).join('');
 
   const meetingItems = meetings.map(m => {
-    const lastSaved = m.lastSaved ? new Date(m.lastSaved).toLocaleString() : '';
+    // Format date as dd/mm/yyyy
+    let displayDate = m.date;
+    const dp = m.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dp) displayDate = `${parseInt(dp[2])}/${dp[3]}/${dp[1]}`;
+
+    // Star rating display
+    const avg = m.avgRating || 0;
+    const fullStars = Math.round(avg);
+    const starsHtml = avg > 0
+      ? Array.from({ length: 10 }, (_, i) =>
+          `<span class="meeting-star${i < fullStars ? ' active' : ''}">\u2605</span>`
+        ).join('') + `<span class="meeting-rating-val">${avg.toFixed(1)}</span>`
+      : '<span class="meeting-rating-val" style="color:var(--text-muted)">No ratings</span>';
+
     return `
       <div class="meeting-item" data-id="${m.id}">
-        <div class="meeting-item-date">${m.date}</div>
-        <div class="meeting-item-saved">${lastSaved ? `Last saved: ${lastSaved}` : ''}</div>
+        <div class="meeting-item-date">${displayDate}</div>
+        <div class="meeting-item-rating">${starsHtml}</div>
         <button class="meeting-item-delete btn btn-outline-dark btn-sm" data-id="${m.id}" title="Delete meeting">&times;</button>
       </div>
     `;
@@ -193,7 +206,11 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
         <div class="dept-section">
           <div class="dept-section-header">
             <h2>Meetings</h2>
-            <button class="btn btn-green" id="btnNewMeeting">+ New L10 Meeting</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-outline" id="btnImportCsv">Import</button>
+              <button class="btn btn-green" id="btnNewMeeting">+ New Meeting</button>
+            </div>
+            <input type="file" id="csvFileInput" accept=".xlsx" style="display:none">
           </div>
           <div class="meetings-list">
             ${meetingItems || '<div class="admin-empty" style="padding:12px;">No meetings yet.</div>'}
@@ -326,6 +343,28 @@ function wireContentEvents(deptName: string): void {
   if (peopleList) {
     peopleList.addEventListener('input', () => savePeopleDebounced(deptName));
   }
+
+  // Import CSV
+  document.getElementById('btnImportCsv')?.addEventListener('click', () => {
+    (document.getElementById('csvFileInput') as HTMLInputElement)?.click();
+  });
+  document.getElementById('csvFileInput')?.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: await file.arrayBuffer(),
+      });
+      const result = await res.json();
+      if (!res.ok) { alert(`Import failed: ${result.error || 'Unknown error'}`); return; }
+      location.hash = `#/dept/${encodeURIComponent(deptName)}/meeting/${result.id}`;
+    } catch (err: any) {
+      alert(`Import failed: ${err.message || err}`);
+    }
+    (e.target as HTMLInputElement).value = '';
+  });
 
   // New meeting
   document.getElementById('btnNewMeeting')?.addEventListener('click', () => {

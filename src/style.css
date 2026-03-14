@@ -688,6 +688,8 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   align-self: center;
   white-space: nowrap;
   padding: 0 8px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
 }
 
 /* ── ADMIN PORTAL ── */
@@ -937,12 +939,26 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   font-weight: 600;
   color: var(--text);
 }
-.meeting-item-saved {
-  font-size: 12px;
-  color: var(--text-muted);
+.meeting-item-rating {
+  display: flex;
+  align-items: center;
+  gap: 1px;
   flex: 1;
-  text-align: right;
+  justify-content: flex-end;
   margin-right: 12px;
+}
+.meeting-star {
+  font-size: 14px;
+  color: #d0d0d0;
+}
+.meeting-star.active {
+  color: #f5a623;
+}
+.meeting-rating-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-left: 6px;
 }
 .meeting-item-delete {
   font-size: 16px;

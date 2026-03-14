@@ -8,9 +8,10 @@ export function statusSelect(options: string[]): string {
 export function onStatusChange(sel: HTMLSelectElement): void {
   sel.className = '';
   const v = sel.value.toLowerCase();
-  if (v === 'on track' || v === 'done' || v === 'yes') sel.className = 'status-done';
-  else if (v === 'off track' || v === 'not done') sel.className = 'status-off-track';
-  else if (v === 'at risk') sel.className = 'status-at-risk';
+  if (v === 'on track' || v === 'done' || v === 'yes' || v === 'solved') sel.className = 'status-done';
+  else if (v === 'off track' || v === 'not done' || v === 'dropped') sel.className = 'status-off-track';
+  else if (v === 'at risk' || v === 'carry over' || v === 'next meeting') sel.className = 'status-at-risk';
+  else if (v === 'open') sel.className = 'status-at-risk';
 }
 
 /** Delete row button HTML */
