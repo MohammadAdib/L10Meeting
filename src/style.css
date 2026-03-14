@@ -212,7 +212,7 @@ body {
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-danger { background: var(--red); color: #fff; }
 .btn-danger:hover { background: #ef4444; }
-.btn-green { background: var(--green); color: #000; }
+.btn-green { background: var(--green); color: #fff; }
 .btn-green:hover { background: #2bc48a; box-shadow: 0 0 16px rgba(52,211,153,.3); }
 .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.8); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }

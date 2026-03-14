@@ -96,7 +96,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     actions.style.opacity = '1';
     actions.style.pointerEvents = '';
     const controlDiv = document.querySelector('.meeting-control')!;
-    controlDiv.innerHTML = '';
+    controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">&nbsp;</span>`;
     document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
     document.querySelectorAll<HTMLElement>('.section-duration').forEach(el => el.style.display = 'inline');
     const btnDelete = document.getElementById('btnDeleteMeeting');
@@ -273,10 +273,10 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       if (startVal && endVal) {
         const [sh, sm] = startVal.split(':').map(Number);
         const [eh, em] = endVal.split(':').map(Number);
-        const totalSecs = (eh * 3600 + em * 60) - (sh * 3600 + sm * 60);
-        if (totalSecs > 0) {
-          const h = Math.floor(totalSecs / 3600);
-          const m = Math.floor((totalSecs % 3600) / 60);
+        const totalMins = (eh * 60 + em) - (sh * 60 + sm);
+        if (totalMins >= 0) {
+          const h = Math.floor(totalMins / 60);
+          const m = totalMins % 60;
           const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
           const controlDiv = document.querySelector('.meeting-control')!;
           controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
