@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog } from './utils';
-import { resetAll, loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
+import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -98,7 +98,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     const controlDiv = document.querySelector('.meeting-control')!;
     controlDiv.innerHTML = '';
     document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
-    document.getElementById('btnReset')?.remove();
+    document.querySelectorAll<HTMLElement>('.section-duration').forEach(el => el.style.display = 'inline');
     const btnDelete = document.getElementById('btnDeleteMeeting');
     if (btnDelete) {
       btnDelete.style.display = '';
@@ -400,7 +400,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     });
   });
 
-  // Timer reset
   document.querySelectorAll<HTMLButtonElement>('[data-timer-reset]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -409,7 +408,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   });
 
   // Top bar buttons
-  document.getElementById('btnReset')?.addEventListener('click', resetAll);
   document.getElementById('btnOpenExcel')?.addEventListener('click', openInExcel);
 
   // Add row buttons

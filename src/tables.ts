@@ -103,7 +103,7 @@ export function addIDSTodoRow(issueN: number): void {
   const tb = document.querySelector(`#idsTodo-${issueN} tbody`);
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Not Started', 'In Progress', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -111,7 +111,7 @@ export function addNewTodoRow(): void {
   const tb = document.querySelector('#newTodoTable tbody');
   if (!tb) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Not Started', 'In Progress', 'Done'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 

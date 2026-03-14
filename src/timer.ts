@@ -62,7 +62,7 @@ function updateTimerBtn(n: number): void {
   const btn = document.getElementById(`timer-btn-${n}`);
   if (!btn) return;
   if (timers[n].running) {
-    btn.innerHTML = '&#9646;&#9646;';
+    btn.innerHTML = '<svg width="10" height="12" viewBox="0 0 10 12"><rect x="0" y="0" width="3" height="12" fill="currentColor"/><rect x="7" y="0" width="3" height="12" fill="currentColor"/></svg>';
     btn.className = 'timer-btn timer-pause';
   } else {
     btn.innerHTML = '&#9654;';

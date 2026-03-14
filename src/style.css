@@ -387,6 +387,13 @@ body {
   font-weight: 800;
   flex-shrink: 0;
 }
+.section-duration {
+  display: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,.45);
+  white-space: nowrap;
+}
 .section-timer { display: flex; align-items: center; gap: 8px; }
 .timer-badge {
   font-size: 12px;

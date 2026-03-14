@@ -1,4 +1,4 @@
-import { showToast, getTableRows, val, confirmDialog, populateTableRows } from './utils';
+import { showToast, getTableRows, val, populateTableRows } from './utils';
 import {
   updateTodoCompletion, updateAvgRating,
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
@@ -6,11 +6,6 @@ import {
   addRatingRow, addScorecardFullRow, addOkrFullRow,
 } from './tables';
 import { createMeeting, saveMeeting, downloadMeetingExcel } from './fs-service';
-
-export async function resetAll(): Promise<void> {
-  if (!await confirmDialog('Reset all fields? This cannot be undone.', 'Reset', true)) return;
-  location.reload();
-}
 
 /** Gather all meeting data from the DOM into a JSON-serializable object */
 export function gatherMeetingData(): Record<string, unknown> {

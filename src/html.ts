@@ -2,10 +2,13 @@ import { SECTIONS } from './types';
 import { getLogoUrl } from './logo';
 
 function sectionCard(num: number, title: string, timeLabel: string, bodyId: string, bodyHTML: string): string {
+  const sec = SECTIONS.find(s => s.num === num);
+  const mins = sec ? Math.round(sec.time / 60) : 0;
   return `
   <div class="section-card" id="sec-${num}">
     <div class="section-header" data-section="${num}">
       <h2><span class="section-num">${num}</span> ${title} <span class="chevron open" id="chev-${num}">&#9662;</span></h2>
+      <span class="section-duration" id="duration-${num}">&#9201; ${mins} min</span>
       <div class="section-timer">
         <span class="timer-badge" id="timer-badge-${num}">${timeLabel}</span>
         <button class="timer-btn timer-play" id="timer-btn-${num}" data-timer="${num}">&#9654;</button>
@@ -83,7 +86,6 @@ export function buildAppHTML(deptName?: string): string {
     </div>
     <div class="top-bar-actions" id="topBarActions" style="opacity:0;pointer-events:none">
       <span class="autosave-status" id="autosaveStatus"></span>
-      <button class="btn btn-outline" id="btnReset">Reset</button>
       <button class="btn btn-primary" id="btnOpenExcel">Open in Excel</button>
       <button class="btn btn-danger" id="btnDeleteMeeting" style="display:none">Delete</button>
     </div>
