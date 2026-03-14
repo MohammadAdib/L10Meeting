@@ -1,0 +1,5 @@
+Allow selecting multiple people or custom inputs or All
+
+Investigate if its possible to make this a web app that remembers which folder in your computer to access. On a fresh run, the user must select a local folder and then the app remembers forever in cookies or something
+
+Remove /data folder requirement. Just start with /Departments

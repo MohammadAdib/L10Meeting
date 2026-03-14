@@ -8,9 +8,10 @@ export function statusSelect(options: string[]): string {
 export function onStatusChange(sel: HTMLSelectElement): void {
   sel.className = '';
   const v = sel.value.toLowerCase();
-  if (v === 'on track' || v === 'done' || v === 'yes') sel.className = 'status-done';
-  else if (v === 'off track' || v === 'not done') sel.className = 'status-off-track';
-  else if (v === 'at risk') sel.className = 'status-at-risk';
+  if (v === 'on track' || v === 'done' || v === 'yes' || v === 'solved') sel.className = 'status-done';
+  else if (v === 'off track' || v === 'not done' || v === 'dropped') sel.className = 'status-off-track';
+  else if (v === 'at risk' || v === 'carry over' || v === 'next meeting') sel.className = 'status-at-risk';
+  else if (v === 'open') sel.className = 'status-at-risk';
 }
 
 /** Delete row button HTML */
@@ -33,6 +34,51 @@ export function getTableRows(tableId: string): string[][] {
 /** Helper: get value of an input by id */
 export function val(id: string): string {
   return (document.getElementById(id) as HTMLInputElement)?.value ?? '';
+}
+
+/** Custom confirm dialog */
+export function confirmDialog(message: string, confirmLabel = 'Confirm', destructive = false): Promise<boolean> {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    const dialog = document.createElement('div');
+    dialog.className = 'dialog';
+    dialog.innerHTML = `
+      <p class="dialog-message">${message}</p>
+      <div class="dialog-actions">
+        <button class="btn btn-outline dialog-cancel">Cancel</button>
+        <button class="btn ${destructive ? 'btn-danger' : 'btn-primary'} dialog-confirm">${confirmLabel}</button>
+      </div>`;
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
+
+    const close = (result: boolean) => {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 150);
+      resolve(result);
+    };
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    dialog.querySelector('.dialog-cancel')!.addEventListener('click', () => close(false));
+    dialog.querySelector('.dialog-confirm')!.addEventListener('click', () => close(true));
+    (dialog.querySelector('.dialog-confirm') as HTMLElement).focus();
+  });
+}
+
+/** Populate a table's rows from saved data arrays */
+export function populateTableRows(tableSelector: string, rows: string[][]): void {
+  const trs = document.querySelectorAll(`${tableSelector} tbody tr`);
+  rows.forEach((cells, ri) => {
+    if (ri >= trs.length) return;
+    const els = trs[ri].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    cells.forEach((v, ci) => {
+      if (ci < els.length) {
+        els[ci].value = v;
+        if (els[ci] instanceof HTMLSelectElement) onStatusChange(els[ci] as HTMLSelectElement);
+      }
+    });
+  });
 }
 
 /** Show toast notification */

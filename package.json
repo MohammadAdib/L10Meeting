@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:server": "tsc -p tsconfig.server.json && (if exist server-dist\\index.cjs del server-dist\\index.cjs) && ren server-dist\\index.js index.cjs",
+    "start": "set BUILD_TARGET=desktop&& npm run build && npm run build:server && node server-dist/index.cjs",
     "preview": "vite preview",
-    "build:desktop": "set BUILD_TARGET=desktop&& vite build && tsc -p tsconfig.server.json && ren server-dist\\index.js index.cjs",
-    "start:server": "node server-dist/index.cjs",
+    "build:desktop": "set BUILD_TARGET=desktop&& vite build && tsc -p tsconfig.server.json && (if exist server-dist\\index.cjs del server-dist\\index.cjs) && ren server-dist\\index.js index.cjs",
     "package": "npm run build:desktop && pkg server-dist/index.cjs --targets node18-win-x64 --output release/L10Meeting.exe --config package.json"
   },
   "devDependencies": {
@@ -27,7 +28,8 @@
   },
   "pkg": {
     "assets": [
-      "dist/**/*"
+      "dist/**/*",
+      "L10_Meeting_Template.xlsx"
     ]
   }
 }

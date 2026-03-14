@@ -1,5 +1,5 @@
 import { SECTIONS } from './types';
-import logoUrl from './logo.png';
+import { getLogoUrl } from './logo';
 
 function sectionCard(num: number, title: string, timeLabel: string, bodyId: string, bodyHTML: string): string {
   return `
@@ -16,7 +16,7 @@ function sectionCard(num: number, title: string, timeLabel: string, bodyId: stri
   </div>`;
 }
 
-function tableHTML(id: string, headers: string[]): string {
+export function tableHTML(id: string, headers: string[]): string {
   const ths = headers.map(h => {
     if (h.startsWith('w:')) {
       const [, w, label] = h.match(/w:(\d+):(.*)/)!;
@@ -27,7 +27,42 @@ function tableHTML(id: string, headers: string[]): string {
   return `<table class="data-table" id="${id}"><thead><tr>${ths}</tr></thead><tbody></tbody></table>`;
 }
 
-export function buildAppHTML(): string {
+/** Reusable Scorecard section HTML (used in both meeting tab and dept view) */
+export function buildScorecardContent(): string {
+  return `
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>SCORECARD TRACKER (Rolling 13 Weeks)</h2></div>
+      <div class="section-body">
+        <p class="section-desc">Track weekly actuals below. Use color-coded status to flag off-track items.</p>
+        <div style="overflow-x:auto;">
+        ${tableHTML('scorecardFullTable', ['Measurable / KPI', 'Owner', 'Goal', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5', 'Wk 6', 'Wk 7', 'Wk 8', 'Wk 9', 'Wk 10', 'Wk 11', 'Wk 12', 'Wk 13', 'w:30:'])}
+        </div>
+        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecardFull">+ Add Measurable</button>
+      </div>
+    </div>`;
+}
+
+/** Reusable OKR section HTML (used in both meeting tab and dept view) */
+export function buildOkrsContent(): string {
+  return `
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
+      <div class="section-body">
+        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
+          <div class="meta-field"><label>Quarter</label><select id="okrQuarter">${[1,2,3,4].map(q => `<option${q === Math.ceil((new Date().getMonth()+1)/3) ? ' selected' : ''}>Q${q}</option>`).join('')}</select></div>
+          <div class="meta-field"><label>Year</label><select id="okrYear">${Array.from({length: 7}, (_, i) => { const y = new Date().getFullYear() - 2 + i; return `<option${y === new Date().getFullYear() ? ' selected' : ''}>${y}</option>`; }).join('')}</select></div>
+          <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
+          <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
+        </div>
+        <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
+        ${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}
+        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
+        <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
+      </div>
+    </div>`;
+}
+
+export function buildAppHTML(deptName?: string): string {
   const sidebarItems = SECTIONS.map((s, i) =>
     `<a class="sidebar-item${i === 0 ? ' active' : ''}" data-nav="${s.num}" href="#sec-${s.num}">
       <span class="sidebar-num">${s.num}</span>
@@ -39,7 +74,7 @@ export function buildAppHTML(): string {
 <div class="top-bar-wrapper">
   <div class="top-bar">
     <div class="top-bar-left">
-      <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
+      ${getLogoUrl() ? `<img src="${getLogoUrl()}" class="top-bar-logo">` : `<button class="top-bar-logo-placeholder" id="btnAddLogo">+ Add Logo</button>`}
       <div class="top-bar-tabs">
         <button class="top-tab active" data-tab="meeting">L10 Meeting</button>
         <button class="top-tab" data-tab="scorecard">Scorecard</button>
@@ -47,15 +82,10 @@ export function buildAppHTML(): string {
       </div>
     </div>
     <div class="top-bar-actions" id="topBarActions" style="opacity:0;pointer-events:none">
-      <div class="server-only" style="display:none">
-        <button class="btn btn-outline" id="btnSave">Save</button>
-        <div class="load-dropdown-wrap">
-          <button class="btn btn-outline" id="btnLoadMenu">Load</button>
-          <div class="load-dropdown" id="loadDropdown"></div>
-        </div>
-      </div>
+      <span class="autosave-status" id="autosaveStatus"></span>
       <button class="btn btn-outline" id="btnReset">Reset</button>
-      <button class="btn btn-primary" id="btnExport">Export Excel</button>
+      <button class="btn btn-primary" id="btnOpenExcel">Open in Excel</button>
+      <button class="btn btn-danger" id="btnDeleteMeeting" style="display:none">Delete</button>
     </div>
   </div>
   <div class="global-progress"><div class="global-progress-fill" id="globalProgress"></div></div>
@@ -107,7 +137,7 @@ export function buildAppHTML(): string {
 
     ${sectionCard(4, 'CUSTOMER / EMPLOYEE HEADLINES', '5:00', 'body-4', `
       <p class="section-desc">Share good or bad news about customers or employees. Drop issues into IDS.</p>
-      ${tableHTML('headlinesTable', ['Headline', 'w:100:Type', 'Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
+      ${tableHTML('headlinesTable', ['Headline', 'w:120:Type', 'w:100:Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddHeadline">+ Add Headline</button>
     `)}
 
@@ -151,35 +181,12 @@ export function buildAppHTML(): string {
 
   <!-- SCORECARD TAB -->
   <div id="tab-scorecard" class="tab-content">
-    <div class="section-card">
-      <div class="section-header" style="cursor:default"><h2>SCORECARD TRACKER (Rolling 13 Weeks)</h2></div>
-      <div class="section-body">
-        <p class="section-desc">Track weekly actuals below. Use color-coded status to flag off-track items.</p>
-        <div style="overflow-x:auto;">
-        ${tableHTML('scorecardFullTable', ['Measurable / KPI', 'Owner', 'Goal', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5', 'Wk 6', 'Wk 7', 'Wk 8', 'Wk 9', 'Wk 10', 'Wk 11', 'Wk 12', 'Wk 13', 'w:30:'])}
-        </div>
-        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecardFull">+ Add Measurable</button>
-      </div>
-    </div>
+    ${buildScorecardContent()}
   </div>
 
   <!-- OKR TAB -->
   <div id="tab-okrs" class="tab-content">
-    <div class="section-card">
-      <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
-      <div class="section-body">
-        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
-          <div class="meta-field"><label>Quarter</label><select id="okrQuarter">${[1,2,3,4].map(q => `<option${q === Math.ceil((new Date().getMonth()+1)/3) ? ' selected' : ''}>Q${q}</option>`).join('')}</select></div>
-          <div class="meta-field"><label>Year</label><select id="okrYear">${Array.from({length: 7}, (_, i) => { const y = new Date().getFullYear() - 2 + i; return `<option${y === new Date().getFullYear() ? ' selected' : ''}>${y}</option>`; }).join('')}</select></div>
-          <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
-          <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
-        </div>
-        <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
-        ${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}
-        <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
-        <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
-      </div>
-    </div>
+    ${buildOkrsContent()}
     </div>
   </div>
   </div><!-- end main-content -->

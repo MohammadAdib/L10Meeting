@@ -1,16 +1,19 @@
 import './style.css';
 import { buildAppHTML } from './html';
-import { initTimers, toggleTimer, resetTimer } from './timer';
-import { onStatusChange } from './utils';
-import { resetAll, isServerAvailable, saveMeeting, listMeetings, loadMeeting } from './storage';
-import { exportExcel } from './export';
+import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
+import { onStatusChange, confirmDialog } from './utils';
+import { resetAll, loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, openInExcel } from './storage';
 import { DEFAULT_MEASURABLES } from './types';
+import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, setRating, updateTodoCompletion, updateAvgRating,
   addScorecardFullRow, addOkrFullRow, addKeyResultRow, buildKeyResultBlocks,
+  resetIdsIssueCount, setPeople,
 } from './tables';
+import * as fs from './fs-service';
+import { getLogoUrl, initLogo, handleLogoClick } from './logo';
 
 // ── Expose globals for inline onclick handlers ──
 declare global {
@@ -30,217 +33,470 @@ window.__setRating = setRating;
 window.__addIDSTodoRow = addIDSTodoRow;
 window.__addKeyResultRow = addKeyResultRow;
 
-// ── Render ──
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = buildAppHTML();
+// ── Router ──
+let _previousHash = '';
+async function route() {
+  const hash = location.hash || '#/';
+  const leavingMeeting = _previousHash.includes('/meeting/') && !hash.includes('/meeting/');
 
-// ── Auto-fill date ──
-const now = new Date();
-(document.getElementById('metaDate') as HTMLInputElement).value = now.toISOString().split('T')[0];
-
-// ── Meeting start/stop ──
-const meetingTab = document.getElementById('tab-meeting')!;
-const sidebar = document.getElementById('sidebar')!;
-meetingTab.classList.add('blurred');
-sidebar.classList.add('blurred');
-
-let meetingInterval: ReturnType<typeof setInterval> | null = null;
-let meetingSeconds = 0;
-
-function formatElapsed(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-function startMeeting() {
-  meetingTab.classList.remove('blurred');
-  sidebar.classList.remove('blurred');
-  const actions = document.getElementById('topBarActions')!;
-  actions.style.opacity = '1';
-  actions.style.pointerEvents = '';
-  // Fill start time
-  const startNow = new Date();
-  (document.getElementById('metaStart') as HTMLInputElement).value = startNow.toTimeString().slice(0, 5);
-
-  const controlDiv = document.querySelector('.meeting-control')!;
-  meetingSeconds = 0;
-  controlDiv.innerHTML = `
-    <button class="meeting-stop-btn" id="btnMeetingStop">
-      <span class="stop-icon"></span>
-      <span class="meeting-timer-display" id="meetingElapsed">0:00</span>
-    </button>`;
-
-  meetingInterval = setInterval(() => {
-    meetingSeconds++;
-    const display = document.getElementById('meetingElapsed');
-    if (display) display.textContent = formatElapsed(meetingSeconds);
-  }, 1000);
-
-  document.getElementById('btnMeetingStop')!.addEventListener('click', stopMeeting);
-}
-
-function stopMeeting() {
-  if (meetingInterval) clearInterval(meetingInterval);
-  // Fill end time
-  const endNow = new Date();
-  (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
-
-  const controlDiv = document.querySelector('.meeting-control')!;
-  controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Meeting ended — ${formatElapsed(meetingSeconds)}</span>`;
-}
-
-document.getElementById('btnMeetingStart')!.addEventListener('click', startMeeting);
-
-// ── Init timers ──
-initTimers();
-
-// ── Populate default rows ──
-DEFAULT_MEASURABLES.forEach(m => addScorecardRow(m));
-for (let i = 0; i < 6; i++) addOkrReviewRow();
-for (let i = 0; i < 5; i++) addHeadlineRow();
-for (let i = 0; i < 7; i++) addTodoReviewRow();
-for (let i = 0; i < 5; i++) addIssueRow();
-for (let i = 0; i < 3; i++) addIDSIssue();
-for (let i = 0; i < 7; i++) addNewTodoRow();
-for (let i = 0; i < 3; i++) addCascadingRow();
-for (let i = 0; i < 5; i++) addRatingRow();
-DEFAULT_MEASURABLES.concat(['', '', '']).forEach(m => addScorecardFullRow(m));
-for (let i = 1; i <= 7; i++) addOkrFullRow('', i);
-buildKeyResultBlocks();
-
-// ── Event Delegation ──
-
-// Tab switching
-document.querySelectorAll<HTMLButtonElement>('.top-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab!;
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.top-tab').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tab}`)?.classList.add('active');
-    btn.classList.add('active');
-    // Show sidebar only on meeting tab
-    const mainContent = document.querySelector<HTMLElement>('.main-content');
-    if (mainContent) {
-      sidebar.style.display = tab === 'meeting' ? '' : 'none';
-      mainContent.style.marginLeft = tab === 'meeting' ? '' : '0';
+  // Confirm before leaving an active meeting
+  if (leavingMeeting && isMeetingActive()) {
+    if (!await confirmDialog('You have an active meeting. Are you sure you want to leave?', 'Leave')) {
+      // Restore the previous hash without triggering another route
+      history.pushState(null, '', _previousHash);
+      return;
     }
-  });
-});
+  }
 
-// Scroll container is .app-layout, not the window
-const scrollContainer = document.querySelector<HTMLElement>('.app-layout')!;
+  _previousHash = hash;
 
-// Focus tracking: clicking a section card focuses it
-function setFocusedSection(num: number) {
-  document.querySelectorAll<HTMLElement>('.section-card').forEach(card => {
-    card.classList.toggle('focused', card.id === `sec-${num}`);
-  });
-  document.querySelectorAll<HTMLAnchorElement>('.sidebar-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.nav === String(num));
-  });
-}
+  // Clean up from any previous meeting view
+  cleanupTimers();
+  await cleanupAutoSave();
 
-// Click anywhere on a section card to focus it
-document.querySelectorAll<HTMLElement>('.section-card[id^="sec-"]').forEach(card => {
-  card.addEventListener('click', () => {
-    const num = parseInt(card.id.replace('sec-', ''));
-    setFocusedSection(num);
-  });
-});
+  const meetingMatch = hash.match(/#\/dept\/([^/]+)\/meeting\/(.+)/);
+  const deptMatch = hash.match(/#\/dept\/([^/]+)$/);
 
-// Sidebar nav clicks: focus + scroll to section
-document.querySelectorAll<HTMLAnchorElement>('.sidebar-item[data-nav]').forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    const n = parseInt(link.dataset.nav!);
-    setFocusedSection(n);
-    const el = document.getElementById(`sec-${n}`);
-    if (el) {
-      const top = el.getBoundingClientRect().top + scrollContainer.scrollTop - scrollContainer.getBoundingClientRect().top;
-      scrollContainer.scrollTo({ top, behavior: 'smooth' });
-    }
-  });
-});
-
-// Default focus on section 1
-setFocusedSection(1);
-
-// Section collapse — only title text and chevron trigger it
-document.querySelectorAll<HTMLElement>('[data-section] h2').forEach(h2 => {
-  h2.style.cursor = 'pointer';
-  h2.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const n = h2.closest('[data-section]')!.getAttribute('data-section')!;
-    document.getElementById(`body-${n}`)?.classList.toggle('collapsed');
-    document.getElementById(`chev-${n}`)?.classList.toggle('open');
-  });
-});
-
-// Timer play/pause
-document.querySelectorAll<HTMLButtonElement>('[data-timer]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleTimer(parseInt(btn.dataset.timer!));
-  });
-});
-
-// Timer reset
-document.querySelectorAll<HTMLButtonElement>('[data-timer-reset]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    resetTimer(parseInt(btn.dataset.timerReset!));
-  });
-});
-
-// Top bar buttons
-document.getElementById('btnSave')?.addEventListener('click', saveMeeting);
-document.getElementById('btnReset')?.addEventListener('click', resetAll);
-document.getElementById('btnExport')?.addEventListener('click', exportExcel);
-
-// Load dropdown
-const loadMenuBtn = document.getElementById('btnLoadMenu');
-const loadDropdown = document.getElementById('loadDropdown');
-loadMenuBtn?.addEventListener('click', async () => {
-  const meetings = await listMeetings();
-  if (meetings.length === 0) {
-    loadDropdown!.innerHTML = '<div class="load-item empty">No saved meetings</div>';
+  if (meetingMatch) {
+    const deptName = decodeURIComponent(meetingMatch[1]);
+    const meetingId = decodeURIComponent(meetingMatch[2]);
+    await initMeetingView(deptName, meetingId);
+  } else if (deptMatch) {
+    const deptName = decodeURIComponent(deptMatch[1]);
+    await renderDepartmentView(deptName);
   } else {
-    loadDropdown!.innerHTML = meetings.map(m =>
-      `<div class="load-item" data-file="${m.filename}">${m.filename.replace('.json', '').replace(/_/g, ' ')}</div>`
-    ).join('');
-    loadDropdown!.querySelectorAll<HTMLElement>('.load-item[data-file]').forEach(item => {
-      item.addEventListener('click', () => {
-        loadMeeting(item.dataset.file!);
-        loadDropdown!.classList.remove('open');
+    await renderAdminPortal();
+  }
+}
+
+async function initMeetingView(deptName: string, meetingId: string): Promise<void> {
+  const app = document.getElementById('app')!;
+
+  // Reset IDS issue counter for fresh meeting
+  resetIdsIssueCount();
+
+  // Render the meeting HTML
+  app.innerHTML = buildAppHTML(deptName);
+
+  // ── Auto-fill date ──
+  const now = new Date();
+  (document.getElementById('metaDate') as HTMLInputElement).value = now.toISOString().split('T')[0];
+
+  // ── Pre-fill team name with department ──
+  (document.getElementById('metaTeam') as HTMLInputElement).value = deptName;
+
+  // ── Meeting start/stop ──
+  const meetingTab = document.getElementById('tab-meeting')!;
+  const sidebar = document.getElementById('sidebar')!;
+  const isExisting = meetingId !== 'new';
+
+  if (isExisting) {
+    // Existing meeting: no blur, no start/stop, no section timers, show actions immediately
+    const actions = document.getElementById('topBarActions')!;
+    actions.style.opacity = '1';
+    actions.style.pointerEvents = '';
+    const controlDiv = document.querySelector('.meeting-control')!;
+    controlDiv.innerHTML = '';
+    document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
+    document.getElementById('btnReset')?.remove();
+    const btnDelete = document.getElementById('btnDeleteMeeting');
+    if (btnDelete) {
+      btnDelete.style.display = '';
+      btnDelete.addEventListener('click', async () => {
+        if (!await confirmDialog('Delete this meeting? This cannot be undone.', 'Delete', true)) return;
+        const ok = await fs.deleteMeeting(deptName, meetingId);
+        if (ok) {
+          disableAutoSave();
+          location.hash = `#/dept/${encodeURIComponent(deptName)}`;
+        }
       });
+    }
+  } else {
+    const btnExcel = document.getElementById('btnOpenExcel');
+    if (btnExcel) btnExcel.style.display = 'none';
+    // New meeting: blur until started
+    meetingTab.classList.add('blurred');
+    sidebar.classList.add('blurred');
+
+    let meetingInterval: ReturnType<typeof setInterval> | null = null;
+    let meetingSeconds = 0;
+
+    function formatElapsed(secs: number): string {
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function startMeeting() {
+      markMeetingStarted();
+      meetingTab.classList.remove('blurred');
+      sidebar.classList.remove('blurred');
+      const actions = document.getElementById('topBarActions')!;
+      actions.style.opacity = '1';
+      actions.style.pointerEvents = '';
+      const startNow = new Date();
+      (document.getElementById('metaStart') as HTMLInputElement).value = startNow.toTimeString().slice(0, 5);
+
+      const controlDiv = document.querySelector('.meeting-control')!;
+      meetingSeconds = 0;
+      controlDiv.innerHTML = `
+        <button class="meeting-stop-btn" id="btnMeetingStop">
+          <span class="stop-icon"></span>
+          <span class="meeting-timer-display" id="meetingElapsed">0:00</span>
+        </button>`;
+
+      meetingInterval = setInterval(() => {
+        meetingSeconds++;
+        const display = document.getElementById('meetingElapsed');
+        if (display) display.textContent = formatElapsed(meetingSeconds);
+      }, 1000);
+
+      document.getElementById('btnMeetingStop')!.addEventListener('click', stopMeeting);
+    }
+
+    function stopMeeting() {
+      if (meetingInterval) clearInterval(meetingInterval);
+      markMeetingStopped();
+      const endNow = new Date();
+      (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
+
+      const controlDiv = document.querySelector('.meeting-control')!;
+      controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${formatElapsed(meetingSeconds)}</span>`;
+      if (btnExcel) btnExcel.style.display = '';
+      forceSave();
+    }
+
+    document.getElementById('btnMeetingStart')!.addEventListener('click', startMeeting);
+  }
+
+  // ── Init timers ──
+  initTimers();
+
+  // ── Fetch department people for dropdowns ──
+  let people: string[] = [];
+  try {
+    people = await fs.getPeople(deptName);
+  } catch { /* empty */ }
+  setPeople(people);
+
+  // ── Convert meta Facilitator/Scribe to people dropdowns ──
+  for (const id of ['metaFacilitator', 'metaScribe']) {
+    const input = document.getElementById(id) as HTMLInputElement | null;
+    if (!input) continue;
+    const sel = document.createElement('select');
+    sel.id = id;
+    sel.className = 'person-select';
+    sel.innerHTML = `<option value=""></option>` +
+      people.map(p => `<option value="${p}">${p}</option>`).join('');
+    input.replaceWith(sel);
+  }
+
+  // ── Populate default rows ──
+  DEFAULT_MEASURABLES.forEach(m => addScorecardRow(m));
+  for (let i = 0; i < 6; i++) addOkrReviewRow();
+  for (let i = 0; i < 5; i++) addHeadlineRow();
+  for (let i = 0; i < 7; i++) addTodoReviewRow();
+  for (let i = 0; i < 5; i++) addIssueRow();
+  for (let i = 0; i < 3; i++) addIDSIssue();
+  for (let i = 0; i < 7; i++) addNewTodoRow();
+  for (let i = 0; i < 3; i++) addCascadingRow();
+
+  // ── Pre-fill rating table with department people ──
+  if (people.length > 0) {
+    people.forEach(() => addRatingRow());
+    // Pre-select each person in the rating name dropdown
+    const selects = document.querySelectorAll<HTMLSelectElement>('#ratingTable tbody tr .person-select');
+    people.forEach((name, i) => {
+      if (i < selects.length) selects[i].value = name;
+    });
+  } else {
+    for (let i = 0; i < 5; i++) addRatingRow();
+  }
+
+  DEFAULT_MEASURABLES.concat(['', '', '']).forEach(m => addScorecardFullRow(m));
+  for (let i = 1; i <= 7; i++) addOkrFullRow('', i);
+  buildKeyResultBlocks();
+
+  // ── For new meetings, carry over scorecard & OKR data from most recent meeting ──
+  if (meetingId === 'new') {
+    try {
+      const meetings = await fs.getMeetings(deptName);
+      if (meetings.length > 0) {
+        meetings.sort((a: any, b: any) => (b.lastSaved || '').localeCompare(a.lastSaved || ''));
+        const lastId = meetings[0].id;
+        const lastData = await fs.getMeetingData(deptName, lastId);
+        if (lastData) {
+          const scRows = (lastData.scorecardTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+          if (scRows && scRows.length > 0) {
+            const scTbody = document.querySelector('#scorecardTable tbody');
+            if (scTbody) scTbody.innerHTML = '';
+            scRows.forEach((cells: string[]) => {
+              addScorecardRow(cells[0] || '');
+              const tr = document.querySelector('#scorecardTable tbody tr:last-child');
+              if (!tr) return;
+              const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+              [1, 2].forEach(ci => {
+                if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
+              });
+            });
+          }
+          const okrRows = (lastData.okrReviewTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+          if (okrRows && okrRows.length > 0) {
+            const okrTbody = document.querySelector('#okrReviewTable tbody');
+            if (okrTbody) okrTbody.innerHTML = '';
+            okrRows.forEach((cells: string[]) => {
+              addOkrReviewRow(cells[0] || '');
+              const tr = document.querySelector('#okrReviewTable tbody tr:last-child');
+              if (!tr) return;
+              const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+              [1, 2].forEach(ci => {
+                if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
+              });
+            });
+          }
+          loadScorecardOkrData(lastData);
+        }
+      }
+    } catch { /* silent */ }
+  }
+
+  // ── If loading existing meeting, populate data ──
+  if (meetingId !== 'new') {
+    const data = await fs.getMeetingData(deptName, meetingId);
+    if (data) {
+      loadMeetingData(data);
+
+      const startVal = (document.getElementById('metaStart') as HTMLInputElement).value;
+      const endVal = (document.getElementById('metaEnd') as HTMLInputElement).value;
+      if (startVal && endVal) {
+        const [sh, sm] = startVal.split(':').map(Number);
+        const [eh, em] = endVal.split(':').map(Number);
+        const totalSecs = (eh * 3600 + em * 60) - (sh * 3600 + sm * 60);
+        if (totalSecs > 0) {
+          const h = Math.floor(totalSecs / 3600);
+          const m = Math.floor((totalSecs % 3600) / 60);
+          const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
+          const controlDiv = document.querySelector('.meeting-control')!;
+          controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
+        }
+      }
+    } else {
+      location.replace('#/');
+      return;
+    }
+  }
+
+  // ── Set up auto-save ──
+  // For new meetings, defer creating on server until first save
+  setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new');
+
+  // ── Event Delegation ──
+
+  // Logo click → back to department view
+  document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
+    location.hash = `#/dept/${encodeURIComponent(deptName)}`;
+  });
+
+  // Add logo button (if no logo set)
+  document.getElementById('btnAddLogo')?.addEventListener('click', () => {
+    handleLogoClick(() => initMeetingView(deptName, meetingId));
+  });
+
+  // Tab switching
+  document.querySelectorAll<HTMLButtonElement>('.top-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab!;
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.top-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tab-${tab}`)?.classList.add('active');
+      btn.classList.add('active');
+      // Show sidebar only on meeting tab
+      const mainContent = document.querySelector<HTMLElement>('.main-content');
+      if (mainContent) {
+        sidebar.style.display = tab === 'meeting' ? '' : 'none';
+        mainContent.style.marginLeft = tab === 'meeting' ? '' : '0';
+      }
+    });
+  });
+
+  // Scroll container is .app-layout, not the window
+  const scrollContainer = document.querySelector<HTMLElement>('.app-layout')!;
+
+  // Focus tracking: clicking a section card focuses it
+  function setFocusedSection(num: number) {
+    document.querySelectorAll<HTMLElement>('.section-card').forEach(card => {
+      card.classList.toggle('focused', card.id === `sec-${num}`);
+    });
+    document.querySelectorAll<HTMLAnchorElement>('.sidebar-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.nav === String(num));
     });
   }
-  loadDropdown!.classList.toggle('open');
-});
-document.addEventListener('click', (e) => {
-  if (!loadMenuBtn?.contains(e.target as Node) && !loadDropdown?.contains(e.target as Node)) {
-    loadDropdown?.classList.remove('open');
-  }
-});
 
-// Detect server and show save/load buttons
-isServerAvailable().then(available => {
-  if (available) {
-    document.querySelectorAll<HTMLElement>('.server-only').forEach(el => el.style.display = '');
-  }
-});
+  // Click anywhere on a section card to focus it
+  document.querySelectorAll<HTMLElement>('.section-card[id^="sec-"]').forEach(card => {
+    card.addEventListener('click', () => {
+      const num = parseInt(card.id.replace('sec-', ''));
+      setFocusedSection(num);
+    });
+  });
 
-// Add row buttons
-document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());
-document.getElementById('btnAddOkrReview')?.addEventListener('click', () => addOkrReviewRow());
-document.getElementById('btnAddHeadline')?.addEventListener('click', () => addHeadlineRow());
-document.getElementById('btnAddTodoReview')?.addEventListener('click', () => addTodoReviewRow());
-document.getElementById('btnAddIssue')?.addEventListener('click', () => addIssueRow());
-document.getElementById('btnAddIDSIssue')?.addEventListener('click', () => addIDSIssue());
-document.getElementById('btnAddNewTodo')?.addEventListener('click', () => addNewTodoRow());
-document.getElementById('btnAddCascading')?.addEventListener('click', () => addCascadingRow());
-document.getElementById('btnAddRating')?.addEventListener('click', () => addRatingRow());
-document.getElementById('btnAddScorecardFull')?.addEventListener('click', () => addScorecardFullRow());
-document.getElementById('btnAddOkrFull')?.addEventListener('click', () => addOkrFullRow());
+  // Sidebar nav clicks: focus + scroll to section
+  document.querySelectorAll<HTMLAnchorElement>('.sidebar-item[data-nav]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const n = parseInt(link.dataset.nav!);
+      setFocusedSection(n);
+      const el = document.getElementById(`sec-${n}`);
+      if (el && scrollContainer) {
+        const top = el.getBoundingClientRect().top + scrollContainer.scrollTop - scrollContainer.getBoundingClientRect().top;
+        scrollContainer.scrollTo({ top, behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Update sidebar on scroll based on which section is most visible
+  let _scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  scrollContainer.addEventListener('scroll', () => {
+    if (_scrollTimer) clearTimeout(_scrollTimer);
+    _scrollTimer = setTimeout(() => {
+      const cards = document.querySelectorAll<HTMLElement>('.section-card[id^="sec-"]');
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      const containerMid = containerTop + scrollContainer.clientHeight / 3;
+      let closest: number | null = null;
+      let closestDist = Infinity;
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        const dist = Math.abs(rect.top - containerMid);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = parseInt(card.id.replace('sec-', ''));
+        }
+      });
+      if (closest !== null) setFocusedSection(closest);
+    }, 50);
+  });
+
+  // Default focus on section 1
+  setFocusedSection(1);
+
+  // Section collapse — only title text and chevron trigger it
+  document.querySelectorAll<HTMLElement>('[data-section] h2').forEach(h2 => {
+    h2.style.cursor = 'pointer';
+    h2.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const n = h2.closest('[data-section]')!.getAttribute('data-section')!;
+      document.getElementById(`body-${n}`)?.classList.toggle('collapsed');
+      document.getElementById(`chev-${n}`)?.classList.toggle('open');
+    });
+  });
+
+  // Timer play/pause
+  document.querySelectorAll<HTMLButtonElement>('[data-timer]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleTimer(parseInt(btn.dataset.timer!));
+    });
+  });
+
+  // Timer reset
+  document.querySelectorAll<HTMLButtonElement>('[data-timer-reset]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetTimer(parseInt(btn.dataset.timerReset!));
+    });
+  });
+
+  // Top bar buttons
+  document.getElementById('btnReset')?.addEventListener('click', resetAll);
+  document.getElementById('btnOpenExcel')?.addEventListener('click', openInExcel);
+
+  // Add row buttons
+  document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());
+  document.getElementById('btnAddOkrReview')?.addEventListener('click', () => addOkrReviewRow());
+  document.getElementById('btnAddHeadline')?.addEventListener('click', () => addHeadlineRow());
+  document.getElementById('btnAddTodoReview')?.addEventListener('click', () => addTodoReviewRow());
+  document.getElementById('btnAddIssue')?.addEventListener('click', () => addIssueRow());
+  document.getElementById('btnAddIDSIssue')?.addEventListener('click', () => addIDSIssue());
+  document.getElementById('btnAddNewTodo')?.addEventListener('click', () => addNewTodoRow());
+  document.getElementById('btnAddCascading')?.addEventListener('click', () => addCascadingRow());
+  document.getElementById('btnAddRating')?.addEventListener('click', () => addRatingRow());
+  document.getElementById('btnAddScorecardFull')?.addEventListener('click', () => addScorecardFullRow());
+  document.getElementById('btnAddOkrFull')?.addEventListener('click', () => addOkrFullRow());
+}
+
+// ── Folder picker landing page ──
+
+function showFolderPicker(hasStored: boolean): void {
+  const app = document.getElementById('app')!;
+  app.innerHTML = `
+    <div class="fp-bg">
+      <div class="fp-glow fp-glow-1"></div>
+      <div class="fp-glow fp-glow-2"></div>
+    </div>
+    <div class="folder-picker">
+      <div class="fp-card">
+        <h1 class="fp-title">L10 Meeting Manager</h1>
+        <p class="fp-desc">Select a new or existing folder to store your meeting data — this choice is remembered.</p>
+
+        <div class="fp-divider"></div>
+
+        <p class="fp-step-label">${hasStored ? 'Reconnect to your data' : 'Get started'}</p>
+
+        ${hasStored ? `
+          <button class="fp-btn fp-btn-primary" id="btnRestoreFolder">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Reconnect folder
+          </button>
+          <button class="fp-btn fp-btn-ghost" id="btnPickFolder">Choose a different folder</button>
+          <button class="fp-btn fp-btn-ghost fp-btn-danger" id="btnForgetFolder">Forget saved folder</button>
+        ` : `
+          <button class="fp-btn fp-btn-primary" id="btnPickFolder">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Choose a folder
+          </button>
+        `}
+
+        <div class="fp-tip">
+          <svg class="fp-tip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+          Use a folder synced with OneDrive, Google Drive, or Dropbox for backup and multi-device access.
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (hasStored) {
+    document.getElementById('btnRestoreFolder')?.addEventListener('click', async () => {
+      const ok = await fs.restoreFolder();
+      if (ok) startApp();
+      else alert('Permission denied. Please try again or choose a new folder.');
+    });
+    document.getElementById('btnForgetFolder')?.addEventListener('click', async () => {
+      await fs.forgetFolder();
+      showFolderPicker(false);
+    });
+  }
+
+  document.getElementById('btnPickFolder')?.addEventListener('click', async () => {
+    const ok = await fs.pickFolder();
+    if (ok) startApp();
+  });
+}
+
+async function startApp(): Promise<void> {
+  await initLogo();
+  window.addEventListener('hashchange', route);
+  route();
+}
+
+// ── Boot ──
+(async () => {
+  const stored = await fs.hasStoredFolder();
+  if (stored === 'granted') {
+    await fs.restoreFolder();
+    await startApp();
+  } else {
+    showFolderPicker(stored === 'prompt');
+  }
+})();
