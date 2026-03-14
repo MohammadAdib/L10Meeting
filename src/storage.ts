@@ -5,6 +5,7 @@ import {
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, addScorecardFullRow, addOkrFullRow,
 } from './tables';
+import { createMeeting, saveMeeting, downloadMeetingExcel } from './fs-service';
 
 export async function resetAll(): Promise<void> {
   if (!await confirmDialog('Reset all fields? This cannot be undone.', 'Reset', true)) return;
@@ -294,25 +295,15 @@ async function doAutoSave(): Promise<void> {
     const data = gatherMeetingData();
     data.lastSaved = new Date().toISOString();
 
-    // Create on server if this is a new meeting
     if (_isNewMeeting && !_autoSaveMeetingId) {
-      const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Create failed');
-      const result = await res.json();
+      const result = await createMeeting(_autoSaveDept, data as Record<string, any>);
+      if (!result) throw new Error('Create failed');
       _autoSaveMeetingId = result.id;
       _isNewMeeting = false;
       history.replaceState(null, '', `#/dept/${encodeURIComponent(_autoSaveDept)}/meeting/${_autoSaveMeetingId}`);
     } else {
-      const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings/${_autoSaveMeetingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Save failed');
+      const ok = await saveMeeting(_autoSaveDept, _autoSaveMeetingId, data as Record<string, any>);
+      if (!ok) throw new Error('Save failed');
     }
     showAutoSaved();
   } catch {
@@ -331,19 +322,17 @@ function showAutoSaved(): void {
   _savedFadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 3000);
 }
 
-/** Force a save then open the Excel file on the server */
+/** Force a save then download the Excel file */
 export async function openInExcel(): Promise<void> {
-  // Ensure latest data is saved first
   await doAutoSave();
   if (!_autoSaveDept || !_autoSaveMeetingId) {
-    showToast('Save the meeting first before opening in Excel.');
+    showToast('Save the meeting first before downloading.');
     return;
   }
   try {
-    const res = await fetch(`/api/departments/${encodeURIComponent(_autoSaveDept)}/meetings/${_autoSaveMeetingId}/open`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed to open');
-    showToast('Opening in Excel...');
+    await downloadMeetingExcel(_autoSaveDept, _autoSaveMeetingId);
+    showToast('Downloading Excel file...');
   } catch {
-    showToast('Could not open file in Excel.');
+    showToast('Could not download file.');
   }
 }

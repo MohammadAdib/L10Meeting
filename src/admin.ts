@@ -3,6 +3,8 @@ import { confirmDialog } from './utils';
 import { buildScorecardContent, buildOkrsContent } from './html';
 import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
 import { loadScorecardOkrData } from './storage';
+import * as fs from './fs-service';
+import { showSettingsMenu } from './settings';
 
 let _selectedDept: string | null = null;
 let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -12,13 +14,7 @@ function savePeopleDebounced(deptName: string): void {
   _peopleSaveTimer = setTimeout(async () => {
     const inputs = document.querySelectorAll<HTMLInputElement>('#peopleList .people-input');
     const names = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
-    try {
-      await fetch(`/api/departments/${encodeURIComponent(deptName)}/people`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ people: names }),
-      });
-    } catch { /* silent */ }
+    await fs.savePeople(deptName, names);
   }, 1000);
 }
 
@@ -28,8 +24,7 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
 
   let departments: { name: string; peopleCount: number }[] = [];
   try {
-    const res = await fetch('/api/departments');
-    departments = await res.json();
+    departments = await fs.getDepartments();
   } catch { /* empty */ }
 
   // Auto-select first department if none specified
@@ -51,7 +46,13 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
           <img src="${logoUrl}" alt="Titan Dynamics" class="top-bar-logo">
           <div class="top-bar-title">L10 Meeting Manager</div>
         </div>
-        <div class="top-bar-actions" style="opacity:1;pointer-events:auto"></div>
+        <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
+          <button class="settings-btn" id="btnSettings" title="Data folder">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div class="admin-layout">
@@ -76,6 +77,11 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
     location.hash = '#/';
   });
 
+  // Settings gear
+  document.getElementById('btnSettings')?.addEventListener('click', (e) => {
+    showSettingsMenu(e.currentTarget as HTMLElement);
+  });
+
   // Wire sidebar clicks
   app.querySelectorAll<HTMLElement>('.sidebar-item[data-dept]').forEach(item => {
     item.addEventListener('click', (e) => {
@@ -95,22 +101,12 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
   document.getElementById('btnAddDept')?.addEventListener('click', async () => {
     const name = prompt('Department name:');
     if (!name || !name.trim()) return;
-    try {
-      const res = await fetch('/api/departments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || 'Failed to create department');
-        return;
-      }
-      // Re-render with new dept selected
-      await renderAdminPortal(name.trim());
-    } catch {
-      alert('Failed to create department');
+    const result = await fs.createDepartment(name.trim());
+    if (!result.ok) {
+      alert(result.error || 'Failed to create department');
+      return;
     }
+    await renderAdminPortal(name.trim());
   });
 
   // Load selected department content
@@ -132,21 +128,16 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
   let meetings: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
 
   try {
-    const [pRes, mRes] = await Promise.all([
-      fetch(`/api/departments/${encodeURIComponent(deptName)}/people`),
-      fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings`),
+    [people, meetings] = await Promise.all([
+      fs.getPeople(deptName),
+      fs.getMeetings(deptName),
     ]);
-    people = await pRes.json();
-    meetings = await mRes.json();
   } catch { /* empty */ }
 
   // Load last meeting data for scorecard/OKR (read-only)
   let lastMeetingData: Record<string, unknown> | null = null;
   if (meetings.length > 0) {
-    try {
-      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${meetings[0].id}`);
-      if (res.ok) lastMeetingData = await res.json();
-    } catch { /* empty */ }
+    lastMeetingData = await fs.getMeetingData(deptName, meetings[0].id);
   }
 
   const scorecardRows = (lastMeetingData?.scorecardFullTable as string[][] | undefined) || [];
@@ -299,13 +290,8 @@ function wireContentEvents(deptName: string): void {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
-      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: await file.arrayBuffer(),
-      });
-      const result = await res.json();
-      if (!res.ok) { alert(`Import failed: ${result.error || 'Unknown error'}`); return; }
+      const result = await fs.importMeetingFile(deptName, await file.arrayBuffer());
+      if (!result) { alert('Import failed'); return; }
       location.hash = `#/dept/${encodeURIComponent(deptName)}/meeting/${result.id}`;
     } catch (err: any) {
       alert(`Import failed: ${err.message || err}`);
@@ -332,16 +318,15 @@ function wireContentEvents(deptName: string): void {
       e.stopPropagation();
       const id = (btn as HTMLElement).dataset.id!;
       if (!await confirmDialog('Delete this meeting? This cannot be undone.', 'Delete', true)) return;
-      try {
-        await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${id}`, { method: 'DELETE' });
+      const ok = await fs.deleteMeeting(deptName, id);
+      if (ok) {
         loadDepartmentContent(deptName);
-        // Refresh sidebar count
         const sidebarItem = document.querySelector<HTMLElement>(`.sidebar-item[data-dept="${deptName}"] .sidebar-meta`);
         if (sidebarItem) {
           const count = parseInt(sidebarItem.textContent || '0');
           sidebarItem.textContent = String(Math.max(0, count - 1));
         }
-      } catch {
+      } else {
         alert('Failed to delete meeting');
       }
     });
@@ -351,32 +336,23 @@ function wireContentEvents(deptName: string): void {
   document.getElementById('btnRenameDept')?.addEventListener('click', async () => {
     const newName = prompt('New department name:', deptName);
     if (!newName || !newName.trim() || newName.trim() === deptName) return;
-    try {
-      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || 'Failed to rename');
-        return;
-      }
-      await renderAdminPortal(newName.trim());
-    } catch {
-      alert('Failed to rename department');
+    const result = await fs.renameDepartment(deptName, newName.trim());
+    if (!result.ok) {
+      alert(result.error || 'Failed to rename');
+      return;
     }
+    await renderAdminPortal(newName.trim());
   });
 
   // Delete department
   document.getElementById('btnDeleteDept')?.addEventListener('click', async () => {
     if (!await confirmDialog(`Delete department "${deptName}" and all its meetings? This cannot be undone.`, 'Delete', true)) return;
-    try {
-      await fetch(`/api/departments/${encodeURIComponent(deptName)}`, { method: 'DELETE' });
+    const ok = await fs.deleteDepartment(deptName);
+    if (ok.ok) {
       _selectedDept = null;
       location.hash = '#/';
       await renderAdminPortal();
-    } catch {
+    } else {
       alert('Failed to delete department');
     }
   });

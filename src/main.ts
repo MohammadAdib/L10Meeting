@@ -12,6 +12,8 @@ import {
   addScorecardFullRow, addOkrFullRow, addKeyResultRow, buildKeyResultBlocks,
   resetIdsIssueCount, setPeople,
 } from './tables';
+import * as fs from './fs-service';
+import logoUrl from './logo.png';
 
 // ── Expose globals for inline onclick handlers ──
 declare global {
@@ -102,13 +104,11 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       btnDelete.style.display = '';
       btnDelete.addEventListener('click', async () => {
         if (!await confirmDialog('Delete this meeting? This cannot be undone.', 'Delete', true)) return;
-        try {
-          const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${meetingId}`, { method: 'DELETE' });
-          if (res.ok) {
-            disableAutoSave();
-            location.hash = `#/dept/${encodeURIComponent(deptName)}`;
-          }
-        } catch { /* silent */ }
+        const ok = await fs.deleteMeeting(deptName, meetingId);
+        if (ok) {
+          disableAutoSave();
+          location.hash = `#/dept/${encodeURIComponent(deptName)}`;
+        }
       });
     }
   } else {
@@ -177,8 +177,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // ── Fetch department people for dropdowns ──
   let people: string[] = [];
   try {
-    const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/people`);
-    if (res.ok) people = await res.json();
+    people = await fs.getPeople(deptName);
   } catch { /* empty */ }
   setPeople(people);
 
@@ -223,52 +222,41 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   // ── For new meetings, carry over scorecard & OKR data from most recent meeting ──
   if (meetingId === 'new') {
     try {
-      const listRes = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings`);
-      if (listRes.ok) {
-        const meetings = await listRes.json();
-        if (meetings.length > 0) {
-          // Sort by last saved descending, pick latest
-          meetings.sort((a: any, b: any) => (b.lastSaved || '').localeCompare(a.lastSaved || ''));
-          const lastId = meetings[0].id;
-          const lastRes = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${lastId}`);
-          if (lastRes.ok) {
-            const lastData = await lastRes.json();
-            // Carry over scorecard rows
-            const scRows = (lastData.scorecardTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
-            if (scRows && scRows.length > 0) {
-              // Clear default rows and rebuild from previous meeting data
-              const scTbody = document.querySelector('#scorecardTable tbody');
-              if (scTbody) scTbody.innerHTML = '';
-              scRows.forEach((cells: string[]) => {
-                addScorecardRow(cells[0] || '');
-                const tr = document.querySelector('#scorecardTable tbody tr:last-child');
-                if (!tr) return;
-                const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-                // Set owner (1) and goal (2) — skip actual, status, notes
-                [1, 2].forEach(ci => {
-                  if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
-                });
+      const meetings = await fs.getMeetings(deptName);
+      if (meetings.length > 0) {
+        meetings.sort((a: any, b: any) => (b.lastSaved || '').localeCompare(a.lastSaved || ''));
+        const lastId = meetings[0].id;
+        const lastData = await fs.getMeetingData(deptName, lastId);
+        if (lastData) {
+          const scRows = (lastData.scorecardTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+          if (scRows && scRows.length > 0) {
+            const scTbody = document.querySelector('#scorecardTable tbody');
+            if (scTbody) scTbody.innerHTML = '';
+            scRows.forEach((cells: string[]) => {
+              addScorecardRow(cells[0] || '');
+              const tr = document.querySelector('#scorecardTable tbody tr:last-child');
+              if (!tr) return;
+              const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+              [1, 2].forEach(ci => {
+                if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
               });
-            }
-            // Carry over OKR review rows
-            const okrRows = (lastData.okrReviewTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
-            if (okrRows && okrRows.length > 0) {
-              const okrTbody = document.querySelector('#okrReviewTable tbody');
-              if (okrTbody) okrTbody.innerHTML = '';
-              okrRows.forEach((cells: string[]) => {
-                addOkrReviewRow(cells[0] || '');
-                const tr = document.querySelector('#okrReviewTable tbody tr:last-child');
-                if (!tr) return;
-                const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-                // Set owner (1) and due date (2) — skip status, %, notes
-                [1, 2].forEach(ci => {
-                  if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
-                });
-              });
-            }
-            // Carry over full scorecard tracker, OKR tracker, and key results
-            loadScorecardOkrData(lastData);
+            });
           }
+          const okrRows = (lastData.okrReviewTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+          if (okrRows && okrRows.length > 0) {
+            const okrTbody = document.querySelector('#okrReviewTable tbody');
+            if (okrTbody) okrTbody.innerHTML = '';
+            okrRows.forEach((cells: string[]) => {
+              addOkrReviewRow(cells[0] || '');
+              const tr = document.querySelector('#okrReviewTable tbody tr:last-child');
+              if (!tr) return;
+              const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+              [1, 2].forEach(ci => {
+                if (ci < els.length && ci < cells.length) els[ci].value = cells[ci];
+              });
+            });
+          }
+          loadScorecardOkrData(lastData);
         }
       }
     } catch { /* silent */ }
@@ -276,33 +264,25 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 
   // ── If loading existing meeting, populate data ──
   if (meetingId !== 'new') {
-    try {
-      const res = await fetch(`/api/departments/${encodeURIComponent(deptName)}/meetings/${meetingId}`);
-      if (res.ok) {
-        const data = await res.json();
-        loadMeetingData(data);
+    const data = await fs.getMeetingData(deptName, meetingId);
+    if (data) {
+      loadMeetingData(data);
 
-        // Show duration for existing meetings based on start/end time
-        const startVal = (document.getElementById('metaStart') as HTMLInputElement).value;
-        const endVal = (document.getElementById('metaEnd') as HTMLInputElement).value;
-        if (startVal && endVal) {
-          const [sh, sm] = startVal.split(':').map(Number);
-          const [eh, em] = endVal.split(':').map(Number);
-          const totalSecs = (eh * 3600 + em * 60) - (sh * 3600 + sm * 60);
-          if (totalSecs > 0) {
-            const h = Math.floor(totalSecs / 3600);
-            const m = Math.floor((totalSecs % 3600) / 60);
-            const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
-            const controlDiv = document.querySelector('.meeting-control')!;
-            controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
-          }
+      const startVal = (document.getElementById('metaStart') as HTMLInputElement).value;
+      const endVal = (document.getElementById('metaEnd') as HTMLInputElement).value;
+      if (startVal && endVal) {
+        const [sh, sm] = startVal.split(':').map(Number);
+        const [eh, em] = endVal.split(':').map(Number);
+        const totalSecs = (eh * 3600 + em * 60) - (sh * 3600 + sm * 60);
+        if (totalSecs > 0) {
+          const h = Math.floor(totalSecs / 3600);
+          const m = Math.floor((totalSecs % 3600) / 60);
+          const elapsed = h > 0 ? `${h}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
+          const controlDiv = document.querySelector('.meeting-control')!;
+          controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">Duration: ${elapsed}</span>`;
         }
-      } else {
-        // Meeting no longer exists — go home and clear history
-        location.replace('#/');
-        return;
       }
-    } catch {
+    } else {
       location.replace('#/');
       return;
     }
@@ -441,6 +421,54 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   document.getElementById('btnAddOkrFull')?.addEventListener('click', () => addOkrFullRow());
 }
 
-// ── Start the router ──
-window.addEventListener('hashchange', route);
-route();
+// ── Folder picker landing page ──
+
+function showFolderPicker(hasStored: boolean): void {
+  const app = document.getElementById('app')!;
+  app.innerHTML = `
+    <div class="folder-picker">
+      <img src="${logoUrl}" alt="Titan Dynamics" class="folder-picker-logo">
+      <h1>L10 Meeting Manager</h1>
+      <p class="folder-picker-desc">Select a folder on your computer to store meeting data.<br>This choice is remembered so you only need to do it once.</p>
+      ${hasStored ? `
+        <button class="btn btn-green folder-picker-btn" id="btnRestoreFolder">Reconnect to saved folder</button>
+        <div style="margin:12px 0;color:var(--text-muted);font-size:13px;">or</div>
+      ` : ''}
+      <button class="btn btn-outline folder-picker-btn" id="btnPickFolder">Choose a folder</button>
+      ${hasStored ? `<button class="btn btn-outline folder-picker-btn" id="btnForgetFolder" style="margin-top:8px;font-size:12px;opacity:0.6;">Forget saved folder</button>` : ''}
+    </div>
+  `;
+
+  if (hasStored) {
+    document.getElementById('btnRestoreFolder')?.addEventListener('click', async () => {
+      const ok = await fs.restoreFolder();
+      if (ok) startApp();
+      else alert('Permission denied. Please try again or choose a new folder.');
+    });
+    document.getElementById('btnForgetFolder')?.addEventListener('click', async () => {
+      await fs.forgetFolder();
+      showFolderPicker(false);
+    });
+  }
+
+  document.getElementById('btnPickFolder')?.addEventListener('click', async () => {
+    const ok = await fs.pickFolder();
+    if (ok) startApp();
+  });
+}
+
+function startApp(): void {
+  window.addEventListener('hashchange', route);
+  route();
+}
+
+// ── Boot ──
+(async () => {
+  const stored = await fs.hasStoredFolder();
+  if (stored === 'granted') {
+    await fs.restoreFolder();
+    startApp();
+  } else {
+    showFolderPicker(stored === 'prompt');
+  }
+})();
