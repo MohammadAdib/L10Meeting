@@ -71,7 +71,7 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Template
           </a>
-          <a class="admin-sidebar-link" href="#/about">
+          <a class="admin-sidebar-link" id="btnAbout">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             About
           </a>
@@ -109,6 +109,12 @@ export async function renderAdminPortal(selectedDept?: string): Promise<void> {
     a.download = 'L10_Template.xlsx';
     a.click();
     URL.revokeObjectURL(a.href);
+  });
+
+  // About dialog
+  document.getElementById('btnAbout')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showAboutDialog();
   });
 
   // Wire sidebar clicks
@@ -471,8 +477,9 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
 ];
 
-export function renderAboutPage(): void {
-  const app = document.getElementById('app')!;
+export function showAboutDialog(): void {
+  // Don't open twice
+  if (document.querySelector('.about-overlay')) return;
 
   const faqHtml = FAQ_ITEMS.map((item, i) => `
     <div class="about-faq-item">
@@ -484,26 +491,18 @@ export function renderAboutPage(): void {
     </div>
   `).join('');
 
-  app.innerHTML = `
-    <div class="top-bar-wrapper">
-      <div class="top-bar">
-        <div class="top-bar-left">
-          ${getLogoUrl() ? `<img src="${getLogoUrl()}" class="top-bar-logo">` : `<span class="top-bar-logo-placeholder" style="cursor:default"></span>`}
-          <div class="top-bar-title">L10 Meeting Manager</div>
-        </div>
-        <div class="top-bar-actions" style="opacity:1;pointer-events:auto">
-          <button class="settings-btn" id="btnAboutClose" title="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="about-page">
-      <div class="about-container">
+  const overlay = document.createElement('div');
+  overlay.className = 'about-overlay';
+  overlay.innerHTML = `
+    <div class="about-dialog">
+      <button class="about-dialog-close" title="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="about-dialog-body">
 
         <div class="about-hero">
           <h1>About L10 Meetings</h1>
-          <p>The Level 10 Meeting is the heartbeat of a team running on the Entrepreneurial Operating System (EOS). It turns meetings from time-wasters into the most productive 90 minutes of your week.</p>
+          <p>The Level 10 Meeting is the heartbeat of a team running on the Entrepreneurial Operating System (EOS). It turns meetings from time-wasters into the most productive 90 minutes of your week. <a href="https://www.eosworldwide.com/blog/three-steps-improve-level-ten-meeting" target="_blank" rel="noopener" class="about-learn-more">Learn more</a></p>
         </div>
 
         <div class="about-section">
@@ -549,24 +548,36 @@ export function renderAboutPage(): void {
     </div>
   `;
 
-  // Logo / close → home
-  document.querySelector('.top-bar-logo')?.addEventListener('click', () => {
-    location.hash = '#/';
-  });
-  document.getElementById('btnAboutClose')?.addEventListener('click', () => {
-    location.hash = '#/';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+
+  function close() {
+    overlay.classList.remove('visible');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+  }
+
+  // Close button
+  overlay.querySelector('.about-dialog-close')!.addEventListener('click', close);
+
+  // Click outside dialog to close
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
   });
 
+  // Escape key
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+  };
+  document.addEventListener('keydown', onKey);
+
   // FAQ accordion
-  document.querySelectorAll<HTMLButtonElement>('.about-faq-q').forEach(btn => {
+  overlay.querySelectorAll<HTMLButtonElement>('.about-faq-q').forEach(btn => {
     btn.addEventListener('click', () => {
       const i = btn.dataset.faq!;
       const answer = document.getElementById(`faq-a-${i}`)!;
       const isOpen = answer.classList.contains('open');
-      // Close all
-      document.querySelectorAll('.about-faq-a').forEach(a => a.classList.remove('open'));
-      document.querySelectorAll('.about-faq-chevron').forEach(c => c.classList.remove('open'));
-      // Toggle clicked
+      overlay.querySelectorAll('.about-faq-a').forEach(a => a.classList.remove('open'));
+      overlay.querySelectorAll('.about-faq-chevron').forEach(c => c.classList.remove('open'));
       if (!isOpen) {
         answer.classList.add('open');
         btn.querySelector('.about-faq-chevron')!.classList.add('open');

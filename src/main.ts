@@ -4,7 +4,7 @@ import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
 import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
-import { renderAdminPortal, renderDepartmentView, renderAboutPage } from './admin';
+import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
@@ -65,9 +65,7 @@ async function route() {
   const meetingMatch = hash.match(/#\/dept\/([^/]+)\/meeting\/(.+)/);
   const deptMatch = hash.match(/#\/dept\/([^/]+)$/);
 
-  if (hash === '#/about') {
-    renderAboutPage();
-  } else if (meetingMatch) {
+  if (meetingMatch) {
     const deptName = decodeURIComponent(meetingMatch[1]);
     const meetingId = decodeURIComponent(meetingMatch[2]);
     await initMeetingView(deptName, meetingId);
