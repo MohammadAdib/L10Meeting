@@ -65,8 +65,6 @@ export function updateProgress(): void {
   const total = SECTIONS.reduce((a, s) => a + s.time, 0);
   const elapsed = SECTIONS.reduce((sum, s) => sum + (s.time - timers[s.num].remaining), 0);
   const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
-  const fill = document.getElementById('meetingProgress');
-  if (fill) fill.style.width = pct + '%';
   const globalFill = document.getElementById('globalProgress');
   if (globalFill) globalFill.style.width = pct + '%';
 }

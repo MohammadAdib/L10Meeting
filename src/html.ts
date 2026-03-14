@@ -12,7 +12,7 @@ function sectionCard(num: number, title: string, timeLabel: string, bodyId: stri
         <button class="timer-btn timer-reset" data-timer-reset="${num}">&#8634;</button>
       </div>
     </div>
-    <div class="section-body" id="${bodyId}">${bodyHTML}</div>
+    <div class="section-body-wrap" id="${bodyId}"><div class="section-body">${bodyHTML}</div></div>
   </div>`;
 }
 
@@ -68,7 +68,6 @@ export function buildAppHTML(): string {
 
       <!-- MEETING TAB -->
       <div id="tab-meeting" class="tab-content active">
-        <div class="progress-bar"><div class="progress-fill" id="meetingProgress" style="width:0%"></div></div>
 
     <div class="meta-grid">
       <div class="meta-field"><label>Team</label><input id="metaTeam" placeholder="e.g. Leadership Team"></div>
@@ -162,7 +161,7 @@ export function buildAppHTML(): string {
     <div class="section-card">
       <div class="section-header" style="cursor:default"><h2>OKR TRACKER (Rocks / 90-Day Priorities)</h2></div>
       <div class="section-body">
-        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px;">
+        <div class="meta-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:16px;margin-bottom:16px;">
           <div class="meta-field"><label>Quarter</label><input id="okrQuarter" placeholder="e.g. Q1 2026"></div>
           <div class="meta-field"><label>Start Date</label><input id="okrStartDate" type="date"></div>
           <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>

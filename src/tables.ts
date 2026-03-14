@@ -70,7 +70,7 @@ export function addIDSIssue(): void {
       <div class="ids-field"><label>Issue</label><textarea placeholder="Describe the real issue (not the symptom)"></textarea></div>
       <div class="ids-field"><label>Root Cause</label><textarea placeholder="Ask 'why?' until you reach the root"></textarea></div>
       <div class="ids-field"><label>Solution</label><textarea placeholder="Agreed solution — be specific"></textarea></div>
-      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-top:8px;display:block;">New To-Do(s)</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-top:8px;margin-bottom:12px;display:block;">New To-Do(s)</label>
       <table class="data-table" id="idsTodo-${n}">
         <thead><tr><th>To-Do</th><th>Owner</th><th>Due Date</th><th style="width:90px">Priority</th><th style="width:110px">Status</th><th>Notes</th><th style="width:30px"></th></tr></thead>
         <tbody></tbody>

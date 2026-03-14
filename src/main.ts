@@ -126,41 +126,50 @@ document.querySelectorAll<HTMLButtonElement>('.top-tab').forEach(btn => {
   });
 });
 
-// Sidebar nav clicks
+// Scroll container is .app-layout, not the window
+const scrollContainer = document.querySelector<HTMLElement>('.app-layout')!;
+
+// Focus tracking: clicking a section card focuses it
+function setFocusedSection(num: number) {
+  document.querySelectorAll<HTMLElement>('.section-card').forEach(card => {
+    card.classList.toggle('focused', card.id === `sec-${num}`);
+  });
+  document.querySelectorAll<HTMLAnchorElement>('.sidebar-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.nav === String(num));
+  });
+}
+
+// Click anywhere on a section card to focus it
+document.querySelectorAll<HTMLElement>('.section-card[id^="sec-"]').forEach(card => {
+  card.addEventListener('click', () => {
+    const num = parseInt(card.id.replace('sec-', ''));
+    setFocusedSection(num);
+  });
+});
+
+// Sidebar nav clicks: focus + scroll to section
 document.querySelectorAll<HTMLAnchorElement>('.sidebar-item[data-nav]').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
-    const n = link.dataset.nav!;
+    const n = parseInt(link.dataset.nav!);
+    setFocusedSection(n);
     const el = document.getElementById(`sec-${n}`);
     if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - 60;
-      window.scrollTo({ top, behavior: 'smooth' });
+      const top = el.getBoundingClientRect().top + scrollContainer.scrollTop - scrollContainer.getBoundingClientRect().top;
+      scrollContainer.scrollTo({ top, behavior: 'smooth' });
     }
   });
 });
 
-// Scroll-spy: highlight current section in sidebar
-function updateScrollSpy() {
-  const sections = [1, 2, 3, 4, 5, 6, 7];
-  let current = 1;
-  for (const n of sections) {
-    const el = document.getElementById(`sec-${n}`);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      if (rect.top <= 120) current = n;
-    }
-  }
-  document.querySelectorAll<HTMLAnchorElement>('.sidebar-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.nav === String(current));
-  });
-}
-window.addEventListener('scroll', updateScrollSpy, { passive: true });
-updateScrollSpy();
+// Default focus on section 1
+setFocusedSection(1);
 
-// Section collapse
-document.querySelectorAll<HTMLDivElement>('[data-section]').forEach(header => {
-  header.addEventListener('click', () => {
-    const n = header.dataset.section!;
+// Section collapse — only title text and chevron trigger it
+document.querySelectorAll<HTMLElement>('[data-section] h2').forEach(h2 => {
+  h2.style.cursor = 'pointer';
+  h2.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const n = h2.closest('[data-section]')!.getAttribute('data-section')!;
     document.getElementById(`body-${n}`)?.classList.toggle('collapsed');
     document.getElementById(`chev-${n}`)?.classList.toggle('open');
   });
