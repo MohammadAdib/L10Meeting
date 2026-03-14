@@ -481,10 +481,18 @@ function initStandaloneMeeting(): void {
 
   (document.getElementById('metaDate') as HTMLInputElement).value = new Date().toISOString().split('T')[0];
 
+  // Hide end time field — it's set by the timer
+  const endTimeField = document.getElementById('metaEnd')?.closest('.meta-field') as HTMLElement | null;
+  if (endTimeField) endTimeField.style.display = 'none';
+
   const { cleanup } = setupMeetingUI({
     showActionsImmediately: true,
     startBlurred: true,
     people: [],
+    onStop: () => {
+      const exportBtn = document.getElementById('btnExportExcel');
+      if (exportBtn) exportBtn.style.display = '';
+    },
   });
 
   // Navigation for browser back
