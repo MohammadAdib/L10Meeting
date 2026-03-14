@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer } from './timer';
 import { onStatusChange } from './utils';
-import { resetAll } from './storage';
+import { resetAll, isServerAvailable, saveMeeting, listMeetings, loadMeeting } from './storage';
 import { exportExcel } from './export';
 import { DEFAULT_MEASURABLES } from './types';
 import {
@@ -195,8 +195,42 @@ document.querySelectorAll<HTMLButtonElement>('[data-timer-reset]').forEach(btn =
 });
 
 // Top bar buttons
+document.getElementById('btnSave')?.addEventListener('click', saveMeeting);
 document.getElementById('btnReset')?.addEventListener('click', resetAll);
 document.getElementById('btnExport')?.addEventListener('click', exportExcel);
+
+// Load dropdown
+const loadMenuBtn = document.getElementById('btnLoadMenu');
+const loadDropdown = document.getElementById('loadDropdown');
+loadMenuBtn?.addEventListener('click', async () => {
+  const meetings = await listMeetings();
+  if (meetings.length === 0) {
+    loadDropdown!.innerHTML = '<div class="load-item empty">No saved meetings</div>';
+  } else {
+    loadDropdown!.innerHTML = meetings.map(m =>
+      `<div class="load-item" data-file="${m.filename}">${m.filename.replace('.json', '').replace(/_/g, ' ')}</div>`
+    ).join('');
+    loadDropdown!.querySelectorAll<HTMLElement>('.load-item[data-file]').forEach(item => {
+      item.addEventListener('click', () => {
+        loadMeeting(item.dataset.file!);
+        loadDropdown!.classList.remove('open');
+      });
+    });
+  }
+  loadDropdown!.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!loadMenuBtn?.contains(e.target as Node) && !loadDropdown?.contains(e.target as Node)) {
+    loadDropdown?.classList.remove('open');
+  }
+});
+
+// Detect server and show save/load buttons
+isServerAvailable().then(available => {
+  if (available) {
+    document.querySelectorAll<HTMLElement>('.server-only').forEach(el => el.style.display = '');
+  }
+});
 
 // Add row buttons
 document.getElementById('btnAddScorecard')?.addEventListener('click', () => addScorecardRow());

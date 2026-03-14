@@ -47,6 +47,13 @@ export function buildAppHTML(): string {
       </div>
     </div>
     <div class="top-bar-actions" id="topBarActions" style="opacity:0;pointer-events:none">
+      <div class="server-only" style="display:none">
+        <button class="btn btn-outline" id="btnSave">Save</button>
+        <div class="load-dropdown-wrap">
+          <button class="btn btn-outline" id="btnLoadMenu">Load</button>
+          <div class="load-dropdown" id="loadDropdown"></div>
+        </div>
+      </div>
       <button class="btn btn-outline" id="btnReset">Reset</button>
       <button class="btn btn-primary" id="btnExport">Export Excel</button>
     </div>

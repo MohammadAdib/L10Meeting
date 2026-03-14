@@ -1,21 +1,5 @@
-import { showToast } from './utils';
+import { showToast, getTableRows, val } from './utils';
 import templateUrl from './template.xlsx?url';
-
-/** Helper: get all input/select values from a table's tbody rows */
-function getTableRows(tableId: string): string[][] {
-  const rows: string[][] = [];
-  document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
-    const cells: string[] = [];
-    tr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')
-      .forEach(el => cells.push(el.value));
-    rows.push(cells);
-  });
-  return rows;
-}
-
-function val(id: string): string {
-  return (document.getElementById(id) as HTMLInputElement)?.value ?? '';
-}
 
 export async function exportExcel(): Promise<void> {
   showToast('Generating Excel...');

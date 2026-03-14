@@ -50,7 +50,34 @@ body {
   gap: 24px;
 }
 .top-bar-logo { align-self: center; }
-.top-bar-actions { display: flex; align-items: center; transition: opacity .4s ease; }
+.top-bar-actions { display: flex; align-items: center; gap: 8px; transition: opacity .4s ease; }
+.server-only { display: flex; gap: 8px; }
+.load-dropdown-wrap { position: relative; }
+.load-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  z-index: 200;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.load-dropdown.open { display: block; }
+.load-item {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .15s;
+}
+.load-item:hover { background: var(--surface2); }
+.load-item.empty { color: var(--text-muted); cursor: default; }
 
 /* ── MEETING CONTROL ── */
 .meeting-control {
