@@ -463,6 +463,8 @@ body {
 
 /* ── TABLES ── */
 .data-table { border-collapse: collapse; font-size: 13px; min-width: max(100%, 700px); }
+.data-table th:last-child,
+.data-table td:last-child { padding-right: 20px; }
 .data-table th {
   text-align: left;
   padding: 10px 10px;

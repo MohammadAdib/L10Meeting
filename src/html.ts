@@ -56,7 +56,7 @@ export function buildOkrsContent(): string {
           <div class="meta-field"><label>Target Completion</label><input id="okrTargetDate" type="date"></div>
         </div>
         <p class="section-desc">Each owner reports On Track / Off Track weekly in the L10. Off-track items go to IDS.</p>
-        <div style="overflow-x:auto">${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'Notes', 'w:30:'])}</div>
+        <div style="overflow-x:auto">${tableHTML('okrFullTable', ['#', 'OKR / Rock Description', 'Owner', 'Due Date', 'w:90:Priority', 'w:70:% Done', 'w:110:Status', 'w:250:Notes', 'w:30:'])}</div>
         <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrFull">+ Add OKR</button>
         <div id="okrKeyResultsContainer" style="margin-top:24px;"></div>
       </div>
@@ -137,25 +137,25 @@ export function buildAppHTML(deptName?: string, standalone = false): string {
 
     ${sectionCard(2, 'SCORECARD REVIEW', '5:00', 'body-2', `
       <p class="section-desc">Review each measurable. Off-track items → add to IDS.</p>
-      ${tableHTML('scorecardTable', ['w:300:Measurable / KPI', 'w:150:Owner', 'Goal', 'Actual', 'w:110:Status', 'Notes', 'w:30:'])}
+      ${tableHTML('scorecardTable', ['w:300:Measurable / KPI', 'w:150:Owner', 'w:100:Goal', 'w:100:Actual', 'w:110:Status', 'w:250:Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecard">+ Add Measurable</button>
     `)}
 
     ${sectionCard(3, 'OKR REVIEW', '5:00', 'body-3', `
       <p class="section-desc">Report On Track / Off Track for each OKR. Off-track items → add to IDS.</p>
-      ${tableHTML('okrReviewTable', ['OKR / Rock Description', 'Owner', 'Due Date', 'w:110:Status', 'w:70:% Done', 'Notes', 'w:30:'])}
+      ${tableHTML('okrReviewTable', ['OKR / Rock Description', 'Owner', 'Due Date', 'w:110:Status', 'w:70:% Done', 'w:250:Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddOkrReview">+ Add OKR</button>
     `)}
 
     ${sectionCard(4, 'CUSTOMER / EMPLOYEE HEADLINES', '5:00', 'body-4', `
       <p class="section-desc">Share good or bad news about customers or employees. Drop issues into IDS.</p>
-      ${tableHTML('headlinesTable', ['Headline', 'w:120:Type', 'w:100:Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
+      ${tableHTML('headlinesTable', ['Headline', 'w:120:Type', 'w:100:Reported By', 'w:110:Action Needed?', 'w:100:Add to IDS?', 'w:250:Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddHeadline">+ Add Headline</button>
     `)}
 
     ${sectionCard(5, 'TO-DO LIST REVIEW', '5:00', 'body-5', `
       <p class="section-desc">Review last week's 7-day commitments. Done / Not Done. Incomplete items → IDS.</p>
-      ${tableHTML('todoReviewTable', ["Last Week's To-Do", 'Owner', 'Due Date', 'w:110:Status', 'w:100:Add to IDS?', 'Notes', 'w:30:'])}
+      ${tableHTML('todoReviewTable', ["Last Week's To-Do", 'Owner', 'Due Date', 'w:110:Status', 'w:100:Add to IDS?', 'w:250:Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddTodoReview">+ Add To-Do</button>
       <div class="completion-stat">
         <span class="stat-num" id="todoCompletionNum">0 / 0</span>
@@ -174,7 +174,7 @@ export function buildAppHTML(deptName?: string, standalone = false): string {
 
     ${sectionCard(7, 'CONCLUDE', '5:00', 'body-7', `
       <h3 class="sub-heading" style="margin-top:14px;">New To-Do List — This Week's Commitments</h3>
-      ${tableHTML('newTodoTable', ['To-Do', 'Owner', 'Due Date', 'w:90:Priority', 'w:110:Status', 'Notes', 'w:30:'])}
+      ${tableHTML('newTodoTable', ['To-Do', 'Owner', 'Due Date', 'w:90:Priority', 'w:110:Status', 'w:250:Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddNewTodo">+ Add To-Do</button>
 
       <h3 class="sub-heading sub-heading-spaced">Cascading Messages — What needs to be shared?</h3>

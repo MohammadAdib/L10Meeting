@@ -107,7 +107,7 @@ export function addIDSIssue(): void {
       <div class="ids-field"><label>Solution</label><textarea placeholder="Agreed solution — be specific"></textarea></div>
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-top:8px;margin-bottom:12px;display:block;">New To-Do(s)</label>
       <table class="data-table" id="idsTodo-${n}">
-        <thead><tr><th>To-Do</th><th>Owner</th><th>Due Date</th><th style="width:90px">Priority</th><th style="width:110px">Status</th><th>Notes</th><th style="width:30px"></th></tr></thead>
+        <thead><tr><th>To-Do</th><th>Owner</th><th>Due Date</th><th style="width:90px">Priority</th><th style="width:110px">Status</th><th style="width:250px">Notes</th><th style="width:30px"></th></tr></thead>
         <tbody></tbody>
       </table>
       <button class="btn btn-outline-dark btn-sm add-row-btn" onclick="window.__addIDSTodoRow(${n})">+ Add To-Do</button>
@@ -209,7 +209,7 @@ export function buildKeyResultBlocks(): void {
     div.innerHTML = `
       <div class="ids-issue-header"><h3><span class="ids-issue-num">${i}</span> OKR #${i} — Key Results</h3></div>
       <table class="data-table" id="keyResults-${i}">
-        <thead><tr><th>#</th><th>Key Result</th><th>Owner</th><th>Target</th><th>Actual</th><th style="width:70px">% Done</th><th style="width:110px">Status</th><th>Notes</th><th style="width:30px"></th></tr></thead>
+        <thead><tr><th>#</th><th>Key Result</th><th>Owner</th><th>Target</th><th>Actual</th><th style="width:70px">% Done</th><th style="width:110px">Status</th><th style="width:250px">Notes</th><th style="width:30px"></th></tr></thead>
         <tbody></tbody>
       </table>
       <button class="btn btn-outline-dark btn-sm add-row-btn" onclick="window.__addKeyResultRow(${i})">+ Add Key Result</button>`;
