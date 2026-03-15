@@ -137,7 +137,7 @@ export function buildAppHTML(deptName?: string, standalone = false): string {
 
     ${sectionCard(2, 'SCORECARD REVIEW', '5:00', 'body-2', `
       <p class="section-desc">Review each measurable. Off-track items → add to IDS.</p>
-      ${tableHTML('scorecardTable', ['w:300:Measurable / KPI', 'Owner', 'Goal', 'Actual', 'w:110:Status', 'Notes', 'w:30:'])}
+      ${tableHTML('scorecardTable', ['w:300:Measurable / KPI', 'w:150:Owner', 'Goal', 'Actual', 'w:110:Status', 'Notes', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddScorecard">+ Add Measurable</button>
     `)}
 

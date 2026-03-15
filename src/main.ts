@@ -515,7 +515,9 @@ function initStandaloneMeeting(): void {
     showActionsImmediately: true,
     startBlurred: true,
     people: [],
+    onStart: () => markMeetingStarted(),
     onStop: () => {
+      markMeetingStopped();
       const exportBtn = document.getElementById('btnExportExcel');
       if (exportBtn) exportBtn.style.display = '';
       if (startTimeField) startTimeField.style.display = '';

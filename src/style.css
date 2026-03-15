@@ -464,7 +464,7 @@ body {
 }
 
 /* ── TABLES ── */
-.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table { border-collapse: collapse; font-size: 13px; min-width: max(100%, 700px); }
 .data-table th {
   text-align: left;
   padding: 10px 10px;
@@ -1857,8 +1857,6 @@ td:has(.person-picker) { vertical-align: middle; }
   .dept-layout { flex-direction: column; gap: 16px; }
   .dept-left { flex: none; width: 100%; }
   .dept-right { flex: none; width: 100%; }
-  .dept-right .data-table { min-width: 700px; }
-
   /* Dept sections: less padding */
   .dept-section { padding: 14px; }
 
