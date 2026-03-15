@@ -527,6 +527,7 @@ function initStandaloneMeeting(): void {
 
   // Navigation for browser back
   history.pushState({ onetime: true }, '', '#/onetime');
+  let _leaving = false;
   const doLeave = () => {
     window.removeEventListener('popstate', onPop);
     window.removeEventListener('hashchange', onHashFallback);
@@ -535,10 +536,13 @@ function initStandaloneMeeting(): void {
     fs.hasStoredFolder().then(stored => showFolderPicker(stored === 'prompt'));
   };
   const tryLeave = async () => {
+    if (_leaving) return;
+    _leaving = true;
     if (isMeetingActive()) {
       if (!await confirmDialog('You have an active meeting. Are you sure you want to leave?', 'Leave')) {
         // Stay — push the hash back
         history.pushState({ onetime: true }, '', '#/onetime');
+        _leaving = false;
         return;
       }
     }
