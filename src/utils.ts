@@ -211,8 +211,9 @@ function openPickerDropdown(picker: HTMLElement, btn: HTMLElement): void {
     dropdown.style.top = `${rect.top - dropRect.height - 2}px`;
   }
 
-  // Dismiss on scroll (deferred to avoid immediate trigger)
-  const onScroll = () => {
+  // Dismiss on scroll (ignore scrolls inside the dropdown itself)
+  const onScroll = (e: Event) => {
+    if (dropdown.contains(e.target as Node)) return;
     closeActivePicker();
     document.removeEventListener('scroll', onScroll, true);
   };
