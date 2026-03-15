@@ -219,7 +219,7 @@ function openPickerDropdown(picker: HTMLElement, btn: HTMLElement): void {
   };
   setTimeout(() => {
     document.addEventListener('scroll', onScroll, true);
-  }, 1000);
+  }, 200);
 
   function updateValue(): void {
     const checks = listEl.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');

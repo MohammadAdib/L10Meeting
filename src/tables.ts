@@ -23,14 +23,16 @@ export function setPeople(people: string[]): void {
   _people = people;
 }
 
-/** Build a multi-select person picker widget */
+/** Build a multi-select person picker widget (or plain input if no people configured) */
 function personSelect(): string {
+  if (_people.length === 0) return `<input placeholder="Name">`;
   const dataAttr = _people.map(p => p.replace(/"/g, '&quot;')).join('|||');
   return `<div class="person-picker" data-people="${dataAttr}"><input type="hidden" class="person-value"><button type="button" class="person-picker-btn" tabindex="0"></button><button type="button" class="person-picker-clear" tabindex="-1">&times;</button></div>`;
 }
 
-/** Build a single-select person dropdown (used for rating table) */
+/** Build a single-select person dropdown (or plain input if no people configured) */
 function personSelectSingle(): string {
+  if (_people.length === 0) return `<input placeholder="Name">`;
   const opts = ['', ..._people].map(p => `<option value="${p.replace(/"/g, '&quot;')}">${p}</option>`).join('');
   return `<select class="person-select">${opts}</select>`;
 }
