@@ -217,9 +217,9 @@ function openPickerDropdown(picker: HTMLElement, btn: HTMLElement): void {
     closeActivePicker();
     document.removeEventListener('scroll', onScroll, true);
   };
-  requestAnimationFrame(() => {
+  setTimeout(() => {
     document.addEventListener('scroll', onScroll, true);
-  });
+  }, 1000);
 
   function updateValue(): void {
     const checks = listEl.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');

@@ -501,16 +501,26 @@ function initStandaloneMeeting(): void {
 
   // Navigation for browser back
   history.pushState({ onetime: true }, '', '#/onetime');
-  const goBack = () => {
+  const doLeave = () => {
     window.removeEventListener('popstate', onPop);
     window.removeEventListener('hashchange', onHashFallback);
     cleanup();
     history.replaceState(null, '', location.pathname);
     fs.hasStoredFolder().then(stored => showFolderPicker(stored === 'prompt'));
   };
-  const onPop = () => goBack();
+  const tryLeave = async () => {
+    if (isMeetingActive()) {
+      if (!await confirmDialog('You have an active meeting. Are you sure you want to leave?', 'Leave')) {
+        // Stay — push the hash back
+        history.pushState({ onetime: true }, '', '#/onetime');
+        return;
+      }
+    }
+    doLeave();
+  };
+  const onPop = () => { tryLeave(); };
   const onHashFallback = () => {
-    if (location.hash !== '#/onetime') goBack();
+    if (location.hash !== '#/onetime') tryLeave();
   };
   window.addEventListener('popstate', onPop);
   window.addEventListener('hashchange', onHashFallback);
@@ -531,7 +541,7 @@ function initStandaloneMeeting(): void {
 
   // Back button
   document.getElementById('btnStandaloneBack')?.addEventListener('click', () => {
-    history.back();
+    tryLeave();
   });
 }
 
