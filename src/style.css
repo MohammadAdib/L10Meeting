@@ -1626,7 +1626,7 @@ td:has(.person-picker) { vertical-align: middle; }
   transition: opacity .4s ease;
   pointer-events: none;
 }
-.adjourned-overlay.show { opacity: 1; }
+.adjourned-overlay.show { opacity: 1; pointer-events: auto; }
 .adjourned-dialog {
   position: relative;
   text-align: center;
