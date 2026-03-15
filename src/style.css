@@ -29,7 +29,8 @@ body {
   line-height: 1.5;
 }
 
-#app { display: flex; flex-direction: column; height: 100%; }
+#app { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+#app:has(.folder-picker) { overflow-y: auto; }
 
 /* ── TOP BAR ── */
 .top-bar-wrapper {
@@ -1511,6 +1512,7 @@ td:has(.person-picker) { vertical-align: middle; }
   padding: 40px 20px;
   position: relative;
   z-index: 1;
+  overflow-y: auto;
 }
 
 .fp-card {
