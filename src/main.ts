@@ -499,6 +499,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
 // ── Standalone one-time meeting ──
 
 function initStandaloneMeeting(): void {
+  markMeetingStopped(); // Reset any stale active meeting state
   const app = document.getElementById('app')!;
   resetIdsIssueCount();
   app.innerHTML = buildAppHTML('', true);
