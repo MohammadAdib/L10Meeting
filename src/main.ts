@@ -77,6 +77,28 @@ async function route() {
   }
 }
 
+// ── Adjourned celebration ──
+
+function showAdjournedDialog(): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'adjourned-overlay';
+  overlay.innerHTML = `
+    <div class="adjourned-dialog">
+      <div class="adjourned-fireworks">
+        ${Array.from({ length: 24 }, () => `<span class="adjourned-spark"></span>`).join('')}
+      </div>
+      <div class="adjourned-icon">&#9989;</div>
+      <h1 class="adjourned-title">Meeting Adjourned!</h1>
+      <p class="adjourned-sub">Great work, team.</p>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    overlay.addEventListener('transitionend', () => overlay.remove());
+  }, 3000);
+}
+
 // ── Shared meeting UI setup ──
 
 interface MeetingUIOptions {
@@ -177,8 +199,10 @@ function setupMeetingUI(opts: MeetingUIOptions): MeetingUIResult {
       if (meetingInterval) clearInterval(meetingInterval);
       const endNow = new Date();
       (document.getElementById('metaEnd') as HTMLInputElement).value = endNow.toTimeString().slice(0, 5);
-      updateDuration();
+      const controlDiv = document.querySelector('.meeting-control')!;
+      controlDiv.innerHTML = `<span class="meeting-duration-label">Duration: ${formatElapsed(meetingSeconds)}</span>`;
       opts.onStop?.();
+      showAdjournedDialog();
     }
 
     document.getElementById('btnMeetingStart')!.addEventListener('click', startMeeting);

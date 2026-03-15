@@ -145,6 +145,16 @@ body {
   border-radius: 3px;
   flex-shrink: 0;
 }
+.meeting-duration-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
 .meeting-timer-display {
   font-size: 16px;
   font-weight: 700;
@@ -1604,6 +1614,102 @@ td:has(.person-picker) { vertical-align: middle; }
 .fp-tip-icon { flex-shrink: 0; color: var(--accent); }
 .fp-tip.fp-tip-green { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.25); color: #16a34a; }
 .fp-tip.fp-tip-green .fp-tip-icon { color: #16a34a; }
+
+/* ── ADJOURNED DIALOG ── */
+.adjourned-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity .4s ease;
+  pointer-events: none;
+}
+.adjourned-overlay.show { opacity: 1; }
+.adjourned-dialog {
+  position: relative;
+  text-align: center;
+  padding: 48px 64px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 60px rgba(255,140,66,.3), 0 0 120px rgba(255,140,66,.1);
+  transform: scale(.7);
+  transition: transform .5s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+.adjourned-overlay.show .adjourned-dialog { transform: scale(1); }
+.adjourned-icon {
+  font-size: 56px;
+  margin-bottom: 8px;
+  animation: adjourned-bounce .6s ease;
+}
+@keyframes adjourned-bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.3); }
+  70% { transform: scale(.9); }
+  100% { transform: scale(1); }
+}
+.adjourned-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.adjourned-sub {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.adjourned-fireworks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.adjourned-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  opacity: 0;
+}
+.adjourned-overlay.show .adjourned-spark {
+  animation: spark-burst .9s ease-out forwards;
+}
+.adjourned-spark:nth-child(1)  { --sx: -80px; --sy: -120px; background: #ff8c42; animation-delay: .05s; }
+.adjourned-spark:nth-child(2)  { --sx: 90px;  --sy: -100px; background: #34d399; animation-delay: .1s; }
+.adjourned-spark:nth-child(3)  { --sx: -120px;--sy: -40px;  background: #60a5fa; animation-delay: .07s; }
+.adjourned-spark:nth-child(4)  { --sx: 130px; --sy: -60px;  background: #f472b6; animation-delay: .12s; }
+.adjourned-spark:nth-child(5)  { --sx: -60px; --sy: 110px;  background: #fbbf24; animation-delay: .08s; }
+.adjourned-spark:nth-child(6)  { --sx: 70px;  --sy: 100px;  background: #a78bfa; animation-delay: .15s; }
+.adjourned-spark:nth-child(7)  { --sx: -140px;--sy: 20px;   background: #34d399; animation-delay: .06s; }
+.adjourned-spark:nth-child(8)  { --sx: 150px; --sy: 10px;   background: #ff8c42; animation-delay: .11s; }
+.adjourned-spark:nth-child(9)  { --sx: -30px; --sy: -140px; background: #f472b6; animation-delay: .09s; }
+.adjourned-spark:nth-child(10) { --sx: 40px;  --sy: -130px; background: #60a5fa; animation-delay: .13s; }
+.adjourned-spark:nth-child(11) { --sx: -100px;--sy: 80px;   background: #fbbf24; animation-delay: .04s; }
+.adjourned-spark:nth-child(12) { --sx: 110px; --sy: 70px;   background: #a78bfa; animation-delay: .14s; }
+.adjourned-spark:nth-child(13) { --sx: -50px; --sy: -90px;  background: #34d399; animation-delay: .16s; }
+.adjourned-spark:nth-child(14) { --sx: 60px;  --sy: -110px; background: #ff8c42; animation-delay: .03s; }
+.adjourned-spark:nth-child(15) { --sx: -110px;--sy: -70px;  background: #60a5fa; animation-delay: .18s; }
+.adjourned-spark:nth-child(16) { --sx: 100px; --sy: -30px;  background: #fbbf24; animation-delay: .02s; }
+.adjourned-spark:nth-child(17) { --sx: -70px; --sy: 130px;  background: #f472b6; animation-delay: .17s; }
+.adjourned-spark:nth-child(18) { --sx: 80px;  --sy: 120px;  background: #a78bfa; animation-delay: .06s; }
+.adjourned-spark:nth-child(19) { --sx: -150px;--sy: -10px;  background: #ff8c42; animation-delay: .19s; }
+.adjourned-spark:nth-child(20) { --sx: 140px; --sy: 40px;   background: #34d399; animation-delay: .08s; }
+.adjourned-spark:nth-child(21) { --sx: -20px; --sy: 140px;  background: #60a5fa; animation-delay: .2s; }
+.adjourned-spark:nth-child(22) { --sx: 30px;  --sy: -150px; background: #fbbf24; animation-delay: .1s; }
+.adjourned-spark:nth-child(23) { --sx: -130px;--sy: 60px;   background: #f472b6; animation-delay: .15s; }
+.adjourned-spark:nth-child(24) { --sx: 120px; --sy: -80px;  background: #a78bfa; animation-delay: .05s; }
+
+@keyframes spark-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+}
 
 /* ── MEDIUM / SQUARE ── */
 @media (max-width: 1100px) {
