@@ -1,7 +1,7 @@
 import { getLogoUrl, handleLogoClick } from './logo';
-import { confirmDialog } from './utils';
-import { buildScorecardContent, buildOkrsContent } from './html';
-import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks } from './tables';
+import { confirmDialog, populateTableRows } from './utils';
+import { buildScorecardContent, buildOkrsContent, buildIDSContent } from './html';
+import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks, addIssueRow, addIDSIssue, addIDSTodoRow, resetIdsIssueCount } from './tables';
 import { loadScorecardOkrData } from './storage';
 import * as fs from './fs-service';
 import blankTemplateUrl from './blank.xlsx?url';
@@ -239,16 +239,38 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
       </div>
 
       <div class="dept-right dept-readonly${meetings.length === 0 ? ' dept-no-meetings' : ' dept-loading'}">
-        <div class="dept-readonly-label">${meetings.length > 0 ? `Scorecard and OKRs from most recent meeting (${meetings[0].date})` : 'Scorecard and OKRs from most recent meeting — no meetings yet'}</div>
-        ${buildScorecardContent()}
-        ${buildOkrsContent()}
+        <div class="dept-readonly-label">${meetings.length > 0 ? `From most recent meeting (${meetings[0].date})` : 'From most recent meeting — no meetings yet'}</div>
+        <div class="dept-tabs">
+          <button class="dept-tab active" data-dept-tab="ids">IDS</button>
+          <button class="dept-tab" data-dept-tab="scorecard">Scorecard</button>
+          <button class="dept-tab" data-dept-tab="okrs">OKRs</button>
+        </div>
+        <div class="dept-tab-content active" id="dept-tab-ids">
+          ${buildIDSContent()}
+        </div>
+        <div class="dept-tab-content" id="dept-tab-scorecard">
+          ${buildScorecardContent()}
+        </div>
+        <div class="dept-tab-content" id="dept-tab-okrs">
+          ${buildOkrsContent()}
+        </div>
       </div>
     </div>
   `;
 
   wireContentEvents(deptName);
 
-  // ── Populate scorecard/OKR ──
+  // ── Wire dept tab switching ──
+  document.querySelectorAll<HTMLButtonElement>('.dept-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.dept-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.dept-tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`dept-tab-${btn.dataset.deptTab}`)?.classList.add('active');
+    });
+  });
+
+  // ── Populate scorecard/OKR/IDS ──
   if (meetings.length === 0) {
     // No meetings — show default empty rows (read-only)
     for (let i = 0; i < DEFAULT_ROWS.scorecard; i++) addScorecardFullRow();
@@ -287,6 +309,39 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
 
       if (lastMeetingData) {
         loadScorecardOkrData(lastMeetingData as Record<string, unknown>);
+      }
+
+      // ── Populate IDS data ──
+      resetIdsIssueCount();
+      const issuesRows = (lastMeetingData?.issuesListTable as string[][] | undefined) || [];
+      const idsBlocks = (lastMeetingData?.idsBlocks as { fields: string[]; todos: string[][] }[] | undefined) || [];
+
+      // Issues list table
+      const issTb = document.querySelector('#issuesListTable tbody');
+      if (issTb) {
+        issTb.innerHTML = '';
+        for (let i = 0; i < Math.max(issuesRows.length, 1); i++) addIssueRow();
+        if (issuesRows.length > 0) populateTableRows('#issuesListTable', issuesRows);
+      }
+
+      // IDS detail blocks
+      const idsContainer = document.getElementById('idsIssuesContainer');
+      if (idsContainer) {
+        idsContainer.innerHTML = '';
+        for (let i = 0; i < idsBlocks.length; i++) addIDSIssue();
+        const blocks = idsContainer.querySelectorAll('.ids-issue');
+        idsBlocks.forEach((block, bi) => {
+          if (bi >= blocks.length) return;
+          const tas = blocks[bi].querySelectorAll<HTMLTextAreaElement>('.ids-field textarea');
+          block.fields.forEach((v, fi) => { if (fi < tas.length) tas[fi].value = v; });
+          const todos = block.todos;
+          if (todos && todos.length > 0) {
+            const issueN = bi + 1;
+            const existingTodos = document.querySelectorAll(`#idsTodo-${issueN} tbody tr`).length;
+            for (let i = existingTodos; i < todos.length; i++) addIDSTodoRow(issueN);
+            populateTableRows(`#idsTodo-${issueN}`, todos);
+          }
+        });
       }
 
       // Apply read-only and reveal

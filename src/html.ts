@@ -30,6 +30,20 @@ export function tableHTML(id: string, headers: string[]): string {
   return `<table class="data-table" id="${id}"><thead><tr>${ths}</tr></thead><tbody></tbody></table>`;
 }
 
+/** Reusable IDS section HTML (used in dept view) */
+export function buildIDSContent(): string {
+  return `
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>IDS — IDENTIFY, DISCUSS, SOLVE</h2></div>
+      <div class="section-body">
+        <p class="section-desc">IDENTIFY — Issues List</p>
+        ${tableHTML('issuesListTable', ['Issue / Obstacle', 'w:130:Raised By', 'w:90:Priority', 'w:110:Status', 'w:80:Time Est.', 'w:90:Next Mtg?', 'w:30:'])}
+        <h3 style="margin:24px 0 12px;font-size:14px;color:var(--text-dim);">DISCUSS & SOLVE</h3>
+        <div id="idsIssuesContainer"></div>
+      </div>
+    </div>`;
+}
+
 /** Reusable Scorecard section HTML (used in both meeting tab and dept view) */
 export function buildScorecardContent(): string {
   return `
