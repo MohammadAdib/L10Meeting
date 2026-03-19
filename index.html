@@ -8,9 +8,15 @@
     <meta name="theme-color" content="#1a1a2e" />
     <link rel="icon" href="/L10Meeting/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/L10Meeting/icon-192.png" />
+    <link rel="manifest" href="/L10Meeting/manifest.webmanifest" />
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/L10Meeting/sw.js');
+      }
+    </script>
   </body>
 </html>
