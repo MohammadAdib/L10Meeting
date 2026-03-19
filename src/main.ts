@@ -10,7 +10,7 @@ import {
   addIssueRow, addIDSIssue, addIDSTodoRow, addNewTodoRow, addCascadingRow,
   addRatingRow, setRating, updateTodoCompletion, updateAvgRating,
   addScorecardFullRow, addOkrFullRow, addKeyResultRow, buildKeyResultBlocks,
-  resetIdsIssueCount, setPeople, showCapToast,
+  resetIdsIssueCount, setPeople, showCapToast, collapseEmptyIDSBlocks,
 } from './tables';
 import * as fs from './fs-service';
 import { getLogoUrl, initLogo, handleLogoClick } from './logo';
@@ -485,6 +485,9 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
       return;
     }
   }
+
+  // Collapse empty IDS blocks
+  collapseEmptyIDSBlocks();
 
   // Auto-save for new meetings; existing meetings use manual Save button
   setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new', isExisting);

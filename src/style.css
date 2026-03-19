@@ -584,6 +584,23 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   margin-bottom: 12px;
   cursor: pointer;
 }
+.ids-issue-header .ids-chevron {
+  color: var(--text-muted);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  font-size: 20px;
+  margin-left: -4px;
+}
+.ids-issue-header.collapsed { margin-bottom: 0; }
+.ids-issue-header .ids-chevron { transform: rotate(180deg); }
+.ids-issue-header.collapsed .ids-chevron { transform: rotate(0deg); }
+.ids-issue-body-wrap {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows .35s ease;
+}
+.ids-issue-body-wrap.collapsed { grid-template-rows: 0fr; }
+.ids-issue-body { overflow: hidden; }
+.ids-issue-body-wrap.collapsed .ids-issue-body { padding-top: 0; padding-bottom: 0; }
 .ids-issue-header h3 {
   font-size: 14px;
   font-weight: 700;

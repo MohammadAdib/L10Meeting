@@ -97,23 +97,41 @@ export function addIDSIssue(): void {
   const div = document.createElement('div');
   div.className = 'ids-issue';
   div.innerHTML = `
-    <div class="ids-issue-header" onclick="this.nextElementSibling.classList.toggle('collapsed')">
-      <h3><span class="ids-issue-num">${n}</span> Issue #${n}</h3>
+    <div class="ids-issue-header" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
+      <h3><span class="ids-issue-num">${n}</span> Issue #${n} <span class="ids-chevron">&#9662;</span></h3>
       <button class="row-delete" onclick="event.stopPropagation();this.closest('.ids-issue').remove()">&times;</button>
     </div>
-    <div>
-      <div class="ids-field"><label>Issue</label><textarea placeholder="Describe the real issue (not the symptom)"></textarea></div>
-      <div class="ids-field"><label>Root Cause</label><textarea placeholder="Ask 'why?' until you reach the root"></textarea></div>
-      <div class="ids-field"><label>Solution</label><textarea placeholder="Agreed solution — be specific"></textarea></div>
-      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-top:8px;margin-bottom:12px;display:block;">New To-Do(s)</label>
-      <table class="data-table" id="idsTodo-${n}">
-        <thead><tr><th>To-Do</th><th>Owner</th><th>Due Date</th><th style="width:90px">Priority</th><th style="width:110px">Status</th><th style="width:250px">Notes</th><th style="width:30px"></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <button class="btn btn-outline-dark btn-sm add-row-btn" onclick="window.__addIDSTodoRow(${n})">+ Add To-Do</button>
+    <div class="ids-issue-body-wrap">
+      <div class="ids-issue-body">
+        <div class="ids-field"><label>Issue</label><textarea placeholder="Describe the real issue (not the symptom)"></textarea></div>
+        <div class="ids-field"><label>Root Cause</label><textarea placeholder="Ask 'why?' until you reach the root"></textarea></div>
+        <div class="ids-field"><label>Solution</label><textarea placeholder="Agreed solution — be specific"></textarea></div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-top:8px;margin-bottom:12px;display:block;">New To-Do(s)</label>
+        <table class="data-table" id="idsTodo-${n}">
+          <thead><tr><th>To-Do</th><th>Owner</th><th>Due Date</th><th style="width:90px">Priority</th><th style="width:110px">Status</th><th style="width:250px">Notes</th><th style="width:30px"></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="btn btn-outline-dark btn-sm add-row-btn" onclick="window.__addIDSTodoRow(${n})">+ Add To-Do</button>
+      </div>
     </div>`;
   container.appendChild(div);
   for (let i = 0; i < 3; i++) addIDSTodoRow(n);
+}
+
+/** Collapse IDS issue blocks that have no data */
+export function collapseEmptyIDSBlocks(): void {
+  document.querySelectorAll('#idsIssuesContainer .ids-issue').forEach(block => {
+    const hasText = Array.from(block.querySelectorAll<HTMLTextAreaElement>('.ids-field textarea'))
+      .some(ta => ta.value.trim() !== '');
+    const hasTodos = Array.from(block.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.ids-issue-body .data-table input, .ids-issue-body .data-table select'))
+      .some(el => el.value.trim() !== '');
+    if (!hasText && !hasTodos) {
+      const header = block.querySelector('.ids-issue-header');
+      const bodyWrap = block.querySelector('.ids-issue-body-wrap');
+      if (header) header.classList.add('collapsed');
+      if (bodyWrap) bodyWrap.classList.add('collapsed');
+    }
+  });
 }
 
 export function addIDSTodoRow(issueN: number): void {
