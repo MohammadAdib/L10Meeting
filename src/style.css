@@ -1663,6 +1663,14 @@ td:has(.person-picker) { vertical-align: middle; }
 .fp-tip-icon { flex-shrink: 0; color: var(--accent); }
 .fp-tip.fp-tip-green { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.25); color: #16a34a; }
 .fp-tip.fp-tip-green .fp-tip-icon { color: #16a34a; }
+.fp-github {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  color: var(--text-muted);
+  transition: color .2s ease;
+}
+.fp-github:hover { color: var(--text); }
 
 /* ── ADJOURNED DIALOG ── */
 .adjourned-overlay {
