@@ -20,19 +20,19 @@ export const SECTIONS: SectionConfig[] = [
   { num: 7, name: 'Conclude', time: 300 },
 ];
 
-export const DEFAULT_MEASURABLES = ['', '', ''];
+export const DEFAULT_MEASURABLES = ['', '', '', '', '', '', ''];
 
-/** Default row counts for tables */
+/** Default row counts — matches blank.xlsx template slot counts */
 export const DEFAULT_ROWS = {
-  scorecard: 3,
-  okr: 7,
-  headlines: 3,
-  todoReview: 3,
-  issues: 3,
-  idsIssues: 3,
-  newTodos: 3,
-  cascading: 3,
-  rating: 3,
+  scorecard: 7,
+  okr: 6,
+  headlines: 7,
+  todoReview: 7,
+  issues: 16,
+  idsIssues: 10,
+  newTodos: 11,
+  cascading: 6,
+  rating: 10,
 } as const;
 
 /** Max rows per section — matches blank.xlsx template slot counts */

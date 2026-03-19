@@ -381,28 +381,21 @@ export async function savePeople(deptName: string, people: string[]): Promise<vo
   } catch { /* silent */ }
 }
 
-export async function getMeetings(deptName: string): Promise<{ id: string; date: string; lastSaved: string; avgRating: number }[]> {
+export async function getMeetings(deptName: string): Promise<{ id: string; date: string; avgRating: number }[]> {
   const ck = cacheKey('meetings', deptName);
-  const cached = cacheGet<{ id: string; date: string; lastSaved: string; avgRating: number }[]>(ck);
+  const cached = cacheGet<{ id: string; date: string; avgRating: number }[]>(ck);
   if (cached) return cached;
   if (!_rootHandle) return [];
   try {
     const meetings = await getMeetingsHandle(deptName);
-    const results: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
+    const results: { id: string; date: string; avgRating: number }[] = [];
 
     for await (const entry of (meetings as any).values()) {
       if (entry.kind !== 'file' || !entry.name.endsWith('.xlsx') || entry.name.startsWith('~$')) continue;
       const id = entry.name.replace('.xlsx', '');
       const dateMatch = entry.name.match(/(\d{4}-\d{2}-\d{2}(-\d+)?)/);
       const date = dateMatch ? dateMatch[1] : id;
-
-      let lastSaved = '';
-      try {
-        const file = await entry.getFile();
-        lastSaved = new Date(file.lastModified).toISOString();
-      } catch { /* skip */ }
-
-      results.push({ id, date, lastSaved, avgRating: 0 });
+      results.push({ id, date, avgRating: 0 });
     }
 
     results.sort((a, b) => b.date.localeCompare(a.date));
@@ -414,12 +407,12 @@ export async function getMeetings(deptName: string): Promise<{ id: string; date:
 }
 
 /** Load ratings for meetings in background (expensive — parses each Excel file) */
-export async function loadMeetingRatings(deptName: string): Promise<{ id: string; date: string; lastSaved: string; avgRating: number }[]> {
+export async function loadMeetingRatings(deptName: string): Promise<{ id: string; date: string; avgRating: number }[]> {
   const ck = cacheKey('meetings', deptName);
   if (!_rootHandle) return cacheGet(ck) ?? [];
   try {
     const meetings = await getMeetingsHandle(deptName);
-    const results: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
+    const results: { id: string; date: string; avgRating: number }[] = [];
 
     for await (const entry of (meetings as any).values()) {
       if (entry.kind !== 'file' || !entry.name.endsWith('.xlsx') || entry.name.startsWith('~$')) continue;
@@ -428,15 +421,16 @@ export async function loadMeetingRatings(deptName: string): Promise<{ id: string
       const date = dateMatch ? dateMatch[1] : id;
 
       let avgRating = 0;
-      let lastSaved = '';
+      let actualDate = date;
       try {
         const file = await entry.getFile();
-        lastSaved = new Date(file.lastModified).toISOString();
         const buffer = await file.arrayBuffer();
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.load(buffer);
         const ws = wb.getWorksheet('L10 Meeting');
         if (ws) {
+          const dateVal = cellStr(ws, 'E2');
+          if (dateVal) actualDate = dateVal;
           let sum = 0, count = 0;
           for (let r = 192; r <= 201; r++) {
             const v = ws.getCell(`B${r}`).value;
@@ -447,7 +441,7 @@ export async function loadMeetingRatings(deptName: string): Promise<{ id: string
         }
       } catch { /* skip */ }
 
-      results.push({ id, date, lastSaved, avgRating });
+      results.push({ id, date: actualDate, avgRating });
     }
 
     results.sort((a, b) => b.date.localeCompare(a.date));
@@ -491,9 +485,6 @@ export async function createMeeting(deptName: string, data: Record<string, any>)
     }
 
     const id = fileName.replace('.xlsx', '');
-    data.createdAt = new Date().toISOString();
-    data.lastSaved = new Date().toISOString();
-
     await writeExcelData(meetings, fileName, data);
     cacheInvalidate(cacheKey('meetings', deptName));
     return { id };
@@ -506,7 +497,6 @@ export async function saveMeeting(deptName: string, meetingId: string, data: Rec
   if (!_rootHandle) return false;
   try {
     const meetings = await getMeetingsHandle(deptName, true);
-    data.lastSaved = new Date().toISOString();
     await writeExcelData(meetings, `${meetingId}.xlsx`, data);
     cacheInvalidate(cacheKey('meetingData', deptName, meetingId));
     cacheInvalidate(cacheKey('meetings', deptName));

@@ -3,7 +3,7 @@ import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
 import { loadMeetingData, loadScorecardOkrData, setupAutoSave, snapshotCleanState, markMeetingStarted, markMeetingStopped, isMeetingActive, isMeetingDirty, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
-import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
+import { DEFAULT_MEASURABLES, DEFAULT_ROWS, MAX_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
   addScorecardRow, addOkrReviewRow, addHeadlineRow, addTodoReviewRow,
@@ -238,8 +238,8 @@ function setupMeetingUI(opts: MeetingUIOptions): MeetingUIResult {
     for (let i = 0; i < DEFAULT_ROWS.rating; i++) addRatingRow();
   }
 
-  DEFAULT_MEASURABLES.forEach(m => addScorecardFullRow(m));
-  for (let i = 1; i <= DEFAULT_ROWS.okr; i++) addOkrFullRow('', i);
+  for (let i = 0; i < MAX_ROWS.scorecardFull; i++) addScorecardFullRow();
+  for (let i = 1; i <= MAX_ROWS.okrFull; i++) addOkrFullRow('', i);
   buildKeyResultBlocks();
 
   // ── Duration change listeners ──
@@ -434,7 +434,6 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     try {
       const meetings = await fs.getMeetings(deptName);
       if (meetings.length > 0) {
-        meetings.sort((a: any, b: any) => (b.lastSaved || '').localeCompare(a.lastSaved || ''));
         const lastId = meetings[0].id;
         const lastData = await fs.getMeetingData(deptName, lastId);
         if (lastData) {

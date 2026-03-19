@@ -6,7 +6,7 @@ import { loadScorecardOkrData } from './storage';
 import * as fs from './fs-service';
 import blankTemplateUrl from './blank.xlsx?url';
 import { showSettingsMenu } from './settings';
-import { DEFAULT_ROWS } from './types';
+import { DEFAULT_ROWS, MAX_ROWS } from './types';
 
 let _selectedDept: string | null = null;
 let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -184,7 +184,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
   content.style.animation = 'fadeSlideRight .3s ease forwards';
 
   let people: string[] = [];
-  let meetings: { id: string; date: string; lastSaved: string; avgRating: number }[] = [];
+  let meetings: { id: string; date: string; avgRating: number }[] = [];
 
   try {
     [people, meetings] = await Promise.all([
@@ -273,8 +273,8 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
   // ── Populate scorecard/OKR/IDS ──
   if (meetings.length === 0) {
     // No meetings — show default empty rows (read-only)
-    for (let i = 0; i < DEFAULT_ROWS.scorecard; i++) addScorecardFullRow();
-    for (let i = 1; i <= DEFAULT_ROWS.okr; i++) addOkrFullRow('', i);
+    for (let i = 0; i < MAX_ROWS.scorecardFull; i++) addScorecardFullRow();
+    for (let i = 1; i <= MAX_ROWS.okrFull; i++) addOkrFullRow('', i);
     buildKeyResultBlocks();
     const dr = document.querySelector('.dept-right');
     if (dr) {
@@ -301,9 +301,9 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
       if (okTb) okTb.innerHTML = '';
       if (krContainer) krContainer.innerHTML = '';
 
-      const scCount = Math.max(scorecardRows.length, DEFAULT_ROWS.scorecard);
+      const scCount = Math.max(scorecardRows.length, MAX_ROWS.scorecardFull);
       for (let i = 0; i < scCount; i++) addScorecardFullRow();
-      const okCount = Math.max(okrRows.length, DEFAULT_ROWS.okr);
+      const okCount = Math.max(okrRows.length, MAX_ROWS.okrFull);
       for (let i = 1; i <= okCount; i++) addOkrFullRow('', i);
       buildKeyResultBlocks();
 
@@ -358,12 +358,19 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
       }
     });
 
-    // ── Background: load meeting ratings ──
+    // ── Background: load meeting ratings + actual dates ──
     fs.loadMeetingRatings(deptName).then(rated => {
       if (_selectedDept !== deptName) return;
       for (const m of rated) {
         const el = document.getElementById(`rating-${m.id}`);
         if (el) el.innerHTML = buildRatingHtml(m.avgRating);
+        // Update date from file contents
+        const item = document.querySelector<HTMLElement>(`.meeting-item[data-id="${m.id}"]`);
+        const dateEl = item?.querySelector('.meeting-item-date');
+        if (dateEl && m.date) {
+          const dp = m.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (dp) dateEl.textContent = `${parseInt(dp[2])}/${dp[3]}/${dp[1]}`;
+        }
       }
     });
   }

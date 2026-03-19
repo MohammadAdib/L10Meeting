@@ -110,6 +110,8 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     newTodoTable: addNewTodoRow,
     cascadingTable: addCascadingRow,
     ratingTable: addRatingRow,
+    scorecardFullTable: addScorecardFullRow,
+    okrFullTable: addOkrFullRow,
   };
   const tableIds = [
     'scorecardTable', 'okrReviewTable', 'headlinesTable', 'todoReviewTable',
@@ -219,12 +221,11 @@ let _meetingStarted = false;
 let _isNewMeeting = false;
 let _manualSaveMode = false;
 let _savedSnapshot: string = '';
+let _listenerAbort: AbortController | null = null;
 
-/** Take a JSON snapshot of current meeting state (excludes lastSaved to avoid false positives) */
+/** Take a JSON snapshot of current meeting state */
 function takeSnapshot(): string {
-  const data = gatherMeetingData();
-  delete data.lastSaved;
-  return JSON.stringify(data);
+  return JSON.stringify(gatherMeetingData());
 }
 
 /** Snapshot the current state as the "clean" baseline */
@@ -256,6 +257,11 @@ export function isMeetingDirty(): boolean {
 }
 
 export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = false, manualSave: boolean = false): void {
+  // Abort any listeners from a previous setupAutoSave call
+  if (_listenerAbort) _listenerAbort.abort();
+  _listenerAbort = new AbortController();
+  const { signal } = _listenerAbort;
+
   _autoSaveDept = dept;
   _autoSaveMeetingId = meetingId;
   _meetingDirty = false;
@@ -277,9 +283,9 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
         if (btn) btn.style.display = dirty ? '' : 'none';
       }, 300);
     };
-    container.addEventListener('input', checkAndShow);
-    container.addEventListener('change', checkAndShow);
-    container.addEventListener('click', checkAndShow);
+    container.addEventListener('input', checkAndShow, { signal });
+    container.addEventListener('change', checkAndShow, { signal });
+    container.addEventListener('click', checkAndShow, { signal });
     return;
   }
 
@@ -290,9 +296,9 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
     _autoSaveTimer = setTimeout(() => doAutoSave(), delay);
   };
 
-  container.addEventListener('input', () => trigger(3000));
-  container.addEventListener('change', () => trigger(3000));
-  container.addEventListener('click', () => trigger(5000));
+  container.addEventListener('input', () => trigger(3000), { signal });
+  container.addEventListener('change', () => trigger(3000), { signal });
+  container.addEventListener('click', () => trigger(5000), { signal });
 }
 
 /** Disable auto-save without flushing (used before deleting a meeting) */
@@ -333,8 +339,6 @@ async function doAutoSave(): Promise<void> {
   if (!_meetingStarted && !_meetingDirty) return;
   try {
     const data = gatherMeetingData();
-    data.lastSaved = new Date().toISOString();
-
     if (_isNewMeeting && !_autoSaveMeetingId) {
       const result = await createMeeting(_autoSaveDept, data as Record<string, any>);
       if (!result) throw new Error('Create failed');
