@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog, initPersonPickers, populateTableRows } from './utils';
-import { loadMeetingData, loadScorecardOkrData, setupAutoSave, snapshotCleanState, markMeetingStarted, markMeetingStopped, isMeetingActive, isMeetingDirty, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
+import { loadMeetingData, loadScorecardOkrData, setupAutoSave, snapshotCleanState, markMeetingStarted, markMeetingStopped, isMeetingActive, isMeetingDirty, isManualSaveMode, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS, MAX_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -55,8 +55,8 @@ async function route() {
     }
   }
 
-  // Confirm before leaving a viewed meeting with unsaved changes
-  if (leavingMeeting && !isMeetingActive() && isMeetingDirty()) {
+  // Confirm before leaving a manually-saved meeting with unsaved changes
+  if (leavingMeeting && !isMeetingActive() && isManualSaveMode() && isMeetingDirty()) {
     if (!await confirmDialog('You have unsaved changes. Leave without saving?', 'Leave')) {
       history.pushState(null, '', _previousHash);
       return;

@@ -256,6 +256,10 @@ export function isMeetingDirty(): boolean {
   return _meetingDirty;
 }
 
+export function isManualSaveMode(): boolean {
+  return _manualSaveMode;
+}
+
 export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = false, manualSave: boolean = false): void {
   // Abort any listeners from a previous setupAutoSave call
   if (_listenerAbort) _listenerAbort.abort();
@@ -268,6 +272,10 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
   _meetingStarted = false;
   _isNewMeeting = isNew;
   _manualSaveMode = manualSave;
+
+  // Hide save button when switching away from manual-save mode
+  const saveBtn = document.getElementById('btnSaveMeeting');
+  if (saveBtn) saveBtn.style.display = 'none';
 
   const container = document.getElementById('app');
   if (!container) return;
