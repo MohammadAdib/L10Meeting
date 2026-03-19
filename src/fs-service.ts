@@ -141,6 +141,19 @@ export async function deleteLogo(): Promise<void> {
 async function ensureStructure(): Promise<void> {
   if (!_rootHandle) return;
   await _rootHandle.getDirectoryHandle('Departments', { create: true });
+
+  // Drop a website shortcut if it doesn't already exist
+  try {
+    const shortcutName = 'L10 Meeting Manager.html';
+    await _rootHandle.getFileHandle(shortcutName);
+  } catch {
+    try {
+      const fh = await _rootHandle.getFileHandle('L10 Meeting Manager.html', { create: true });
+      const w = await fh.createWritable();
+      await w.write('<html><head><meta http-equiv="refresh" content="0;url=https://mohammadadib.github.io/L10Meeting/"><link rel="icon" href="https://mohammadadib.github.io/L10Meeting/icon.svg" type="image/svg+xml"></head></html>');
+      await w.close();
+    } catch { /* silent — don't block app init */ }
+  }
 }
 
 // ── Internal helpers ──
