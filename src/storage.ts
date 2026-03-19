@@ -217,6 +217,26 @@ let _autoSaveMeetingId: string = '';
 let _meetingDirty = false;
 let _meetingStarted = false;
 let _isNewMeeting = false;
+let _manualSaveMode = false;
+let _savedSnapshot: string = '';
+
+/** Take a JSON snapshot of current meeting state (excludes lastSaved to avoid false positives) */
+function takeSnapshot(): string {
+  const data = gatherMeetingData();
+  delete data.lastSaved;
+  return JSON.stringify(data);
+}
+
+/** Snapshot the current state as the "clean" baseline */
+export function snapshotCleanState(): void {
+  _savedSnapshot = takeSnapshot();
+  _meetingDirty = false;
+}
+
+function checkDirty(): boolean {
+  if (!_savedSnapshot) return true; // new meeting with no snapshot = dirty once started
+  return takeSnapshot() !== _savedSnapshot;
+}
 
 export function markMeetingStarted(): void {
   _meetingStarted = true;
@@ -231,15 +251,37 @@ export function isMeetingActive(): boolean {
   return _meetingStarted;
 }
 
-export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = false): void {
+export function isMeetingDirty(): boolean {
+  return _meetingDirty;
+}
+
+export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = false, manualSave: boolean = false): void {
   _autoSaveDept = dept;
   _autoSaveMeetingId = meetingId;
   _meetingDirty = false;
   _meetingStarted = false;
   _isNewMeeting = isNew;
+  _manualSaveMode = manualSave;
 
   const container = document.getElementById('app');
   if (!container) return;
+
+  if (manualSave) {
+    let _dirtyCheckTimer: ReturnType<typeof setTimeout> | null = null;
+    const checkAndShow = () => {
+      if (_dirtyCheckTimer) clearTimeout(_dirtyCheckTimer);
+      _dirtyCheckTimer = setTimeout(() => {
+        const dirty = checkDirty();
+        _meetingDirty = dirty;
+        const btn = document.getElementById('btnSaveMeeting');
+        if (btn) btn.style.display = dirty ? '' : 'none';
+      }, 300);
+    };
+    container.addEventListener('input', checkAndShow);
+    container.addEventListener('change', checkAndShow);
+    container.addEventListener('click', checkAndShow);
+    return;
+  }
 
   const trigger = (delay = 3000) => {
     if (!_meetingStarted && _isNewMeeting) return;
@@ -261,12 +303,13 @@ export function disableAutoSave(): void {
   _meetingDirty = false;
   _meetingStarted = false;
   _isNewMeeting = false;
+  _manualSaveMode = false;
 }
 
 export async function cleanupAutoSave(): Promise<void> {
   if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
-  // Save on leave if there are unsaved changes
-  if (_meetingDirty || _meetingStarted) {
+  // Auto-save on leave only if not in manual-save mode
+  if (!_manualSaveMode && (_meetingDirty || _meetingStarted)) {
     await doAutoSave();
   }
   _autoSaveDept = '';
@@ -274,6 +317,7 @@ export async function cleanupAutoSave(): Promise<void> {
   _meetingDirty = false;
   _meetingStarted = false;
   _isNewMeeting = false;
+  _manualSaveMode = false;
 }
 
 /** Force an immediate save */
@@ -281,6 +325,7 @@ export async function forceSave(): Promise<void> {
   if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
   _meetingDirty = true;
   await doAutoSave();
+  snapshotCleanState();
 }
 
 async function doAutoSave(): Promise<void> {

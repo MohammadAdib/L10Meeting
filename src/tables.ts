@@ -156,6 +156,7 @@ export function setRating(btn: HTMLElement, val: number): void {
   stars.forEach((s, i) => s.classList.toggle('active', i < val));
   const hidden = btn.parentElement!.nextElementSibling as HTMLInputElement;
   hidden.value = String(val);
+  hidden.dispatchEvent(new Event('change', { bubbles: true }));
   updateAvgRating();
 }
 

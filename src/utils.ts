@@ -109,7 +109,10 @@ export function initPersonPickers(): void {
       if (!picker) return;
       const input = picker.querySelector<HTMLInputElement>('.person-value');
       const btn = picker.querySelector<HTMLElement>('.person-picker-btn');
-      if (input) input.value = '';
+      if (input) {
+        input.value = '';
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       if (btn) btn.textContent = '';
       picker.classList.remove('has-value');
       closeActivePicker();
@@ -232,6 +235,7 @@ function openPickerDropdown(picker: HTMLElement, btn: HTMLElement): void {
     hiddenInput.value = isAll ? 'All' : allSelected.join(', ');
     btn.textContent = isAll ? 'All' : (allSelected.length > 0 ? allSelected.join(', ') : '');
     picker.classList.toggle('has-value', allSelected.length > 0);
+    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
 
     // Update "All" checkbox
     const allCb = dropdown.querySelector<HTMLInputElement>('.pp-all-cb');
@@ -266,6 +270,7 @@ function openPickerDropdown(picker: HTMLElement, btn: HTMLElement): void {
       btn.textContent = cur.join(', ');
       picker.classList.add('has-value');
       currentValues.push(name);
+      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
     customInput.value = '';
     // Check the checkbox if this person is in the list

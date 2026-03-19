@@ -2,7 +2,7 @@ import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
 import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
-import { loadMeetingData, loadScorecardOkrData, setupAutoSave, markMeetingStarted, markMeetingStopped, isMeetingActive, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
+import { loadMeetingData, loadScorecardOkrData, setupAutoSave, snapshotCleanState, markMeetingStarted, markMeetingStopped, isMeetingActive, isMeetingDirty, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
 import {
@@ -50,7 +50,14 @@ async function route() {
   // Confirm before leaving an active meeting
   if (leavingMeeting && isMeetingActive()) {
     if (!await confirmDialog('You have an active meeting. Are you sure you want to leave?', 'Leave')) {
-      // Restore the previous hash without triggering another route
+      history.pushState(null, '', _previousHash);
+      return;
+    }
+  }
+
+  // Confirm before leaving a viewed meeting with unsaved changes
+  if (leavingMeeting && !isMeetingActive() && isMeetingDirty()) {
+    if (!await confirmDialog('You have unsaved changes. Leave without saving?', 'Leave')) {
       history.pushState(null, '', _previousHash);
       return;
     }
@@ -376,6 +383,13 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     controlDiv.innerHTML = `<span style="color:var(--text-muted);font-size:13px;font-weight:600;">&nbsp;</span>`;
     document.querySelectorAll<HTMLElement>('.section-timer').forEach(el => el.style.display = 'none');
     document.querySelectorAll<HTMLElement>('.section-duration').forEach(el => el.style.display = 'inline');
+    const btnSave = document.getElementById('btnSaveMeeting');
+    if (btnSave) {
+      btnSave.addEventListener('click', async () => {
+        await forceSave();
+        btnSave.style.display = 'none';
+      });
+    }
     const btnDelete = document.getElementById('btnDeleteMeeting');
     if (btnDelete) {
       btnDelete.style.display = '';
@@ -483,8 +497,9 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
     }
   }
 
-  // Auto-save
-  setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new');
+  // Auto-save for new meetings; existing meetings use manual Save button
+  setupAutoSave(deptName, meetingId === 'new' ? '' : meetingId, meetingId === 'new', isExisting);
+  if (isExisting) snapshotCleanState();
   setupScorecardOkrSync();
 
   // Logo

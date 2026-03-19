@@ -678,7 +678,7 @@ function readWorkbookToJson(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet): Record
   }
   data.idsBlocks = idsBlocks;
 
-  // Conclude section — data rows (matches blank.xlsx layout)
+  // Conclude section — data rows (row after column headers in blank.xlsx)
   const newTodoStart = 171;
   const cascadingStart = 184;
   const ratingStart = 192;
@@ -714,7 +714,41 @@ function readTable(ws: ExcelJS.Worksheet, startRow: number, maxRows: number, col
   return rows;
 }
 
+function clearTable(ws: ExcelJS.Worksheet, startRow: number, maxRows: number, cols: string[]): void {
+  for (let i = 0; i < maxRows; i++) {
+    const r = startRow + i;
+    for (const col of cols) {
+      ws.getCell(`${col}${r}`).value = '';
+    }
+  }
+}
+
 function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: Record<string, any>): void {
+  const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  // Clear all data regions before writing to avoid stale data from old saves
+  clearTable(ws, 14, 7, cols);   // scorecardTable
+  clearTable(ws, 26, 6, cols);   // okrReviewTable
+  clearTable(ws, 37, 7, cols);   // headlinesTable
+  clearTable(ws, 47, 7, cols);   // todoReviewTable
+  clearTable(ws, 60, 16, cols);  // issuesListTable
+  clearTable(ws, 171, 11, cols); // newTodoTable
+  clearTable(ws, 184, 6, cols);  // cascadingTable
+  for (let i = 0; i < 10; i++) { // ratingTable
+    const r = 192 + i;
+    ws.getCell(`A${r}`).value = '';
+    ws.getCell(`B${r}`).value = '';
+    ws.getCell(`C${r}`).value = '';
+  }
+  // Clear IDS blocks (fields + todos)
+  const issueHeaderRows = [77, 86, 95, 104, 113, 122, 131, 140, 149, 158];
+  for (const base of issueHeaderRows) {
+    ws.getCell(`B${base + 1}`).value = '';  // Issue
+    ws.getCell(`B${base + 2}`).value = '';  // Root Cause
+    ws.getCell(`B${base + 3}`).value = '';  // Solution
+    clearTable(ws, base + 5, 4, cols);      // Todos
+  }
+
   const meta = data.meta || {};
   ws.getCell('B2').value = meta.team || '';
   ws.getCell('E2').value = meta.date || '';
@@ -739,8 +773,8 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
 
   writeTable(ws, data.issuesListTable, 60, 16, ['A', 'B', 'C', 'D', 'E', 'F']);
 
-  // IDS block layout: header(base), Issue:(base+1), Root Cause:(base+2), Solution:(base+3), Todo header(base+4), todos(base+5..base+9)
-  const issueStarts = [78, 87, 96, 105, 114, 123, 132, 141, 150, 159];
+  // IDS block layout: base=header("Issue #N"), Issue:(base+1), Root Cause:(base+2), Solution:(base+3), Todo header(base+4), todos(base+5..base+8)
+  const issueStarts = [77, 86, 95, 104, 113, 122, 131, 140, 149, 158];
   const idsBlocks = data.idsBlocks || [];
   idsBlocks.forEach((block: any, bi: number) => {
     if (bi >= issueStarts.length) return;
@@ -750,8 +784,8 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
     if (fields[0]) ws.getCell(`B${base + 1}`).value = fields[0];
     if (fields[1]) ws.getCell(`B${base + 2}`).value = fields[1];
     if (fields[2]) ws.getCell(`B${base + 3}`).value = fields[2];
-    // Todos start at base+4 (Issue:+0, Root Cause:+1, Solution:+2, Todo header:+3, data:+4)
-    writeTable(ws, block.todos, base + 4, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
+    // Todos: base=header row, +1=Issue, +2=Root Cause, +3=Solution, +4=Todo header, +5=first data row
+    writeTable(ws, block.todos, base + 5, 4, ['A', 'B', 'C', 'D', 'E', 'F']);
   });
 
   writeTable(ws, data.newTodoTable, 171, 11, ['A', 'B', 'C', 'D', 'E', 'F']);
@@ -797,10 +831,10 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
   for (let bi = 0; bi < issueStarts.length; bi++) {
     const base = issueStarts[bi];
     for (let i = 0; i < 4; i++) {
-      ws.getCell(`D${base + 4 + i}`).dataValidation = {
+      ws.getCell(`D${base + 5 + i}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: ['"High,Medium,Low"'],
       };
-      ws.getCell(`E${base + 4 + i}`).dataValidation = {
+      ws.getCell(`E${base + 5 + i}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: ['"Not Started,In Progress,Done"'],
       };
     }
