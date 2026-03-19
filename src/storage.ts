@@ -370,17 +370,31 @@ function showAutoSaved(): void {
 
 let _syncTimer: ReturnType<typeof setTimeout> | null = null;
 
+function syncPair(a: Element, b: Element, aIdx: number, bIdx: number): void {
+  const aEls = a.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+  const bEls = b.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+  if (aEls[aIdx] && bEls[bIdx] && bEls[bIdx].value !== aEls[aIdx].value) {
+    bEls[bIdx].value = aEls[aIdx].value;
+    // Update person picker button text if syncing a hidden person-value
+    if (bEls[bIdx].classList.contains('person-value')) {
+      const picker = bEls[bIdx].parentElement;
+      const btn = picker?.querySelector('.person-picker-btn');
+      if (btn) btn.textContent = bEls[bIdx].value || '';
+      if (picker) picker.classList.toggle('has-value', !!bEls[bIdx].value);
+    }
+  }
+}
+
+// scorecardFullTable: [name(0), owner(1), goal(2), wk1(3)...wk13(15)]
+// scorecardTable:     [name(0), owner(1), goal(2), actual(3), status(4), notes(5)]
+const SC_SYNC = [[0, 0], [1, 1], [2, 2]]; // name, owner, goal
+
 function syncScorecardToReview(): void {
   const fullRows = document.querySelectorAll('#scorecardFullTable tbody tr');
   const reviewRows = document.querySelectorAll('#scorecardTable tbody tr');
   fullRows.forEach((fullTr, i) => {
     if (i >= reviewRows.length) return;
-    const fullEls = fullTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    const revEls = reviewRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    // scorecardFullTable: [name(0), owner(1), goal(2), wk1...wk13]
-    // scorecardTable:     [name(0), owner(1), goal(2), actual(3), status(4), notes(5)]
-    if (fullEls[0] && revEls[0] && revEls[0].value !== fullEls[0].value) revEls[0].value = fullEls[0].value;
-    if (fullEls[1] && revEls[1] && revEls[1].value !== fullEls[1].value) revEls[1].value = fullEls[1].value;
+    for (const [fi, ri] of SC_SYNC) syncPair(fullTr, reviewRows[i], fi, ri);
   });
 }
 
@@ -389,24 +403,21 @@ function syncReviewToScorecard(): void {
   const reviewRows = document.querySelectorAll('#scorecardTable tbody tr');
   reviewRows.forEach((revTr, i) => {
     if (i >= fullRows.length) return;
-    const revEls = revTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    const fullEls = fullRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    if (revEls[0] && fullEls[0] && fullEls[0].value !== revEls[0].value) fullEls[0].value = revEls[0].value;
-    if (revEls[1] && fullEls[1] && fullEls[1].value !== revEls[1].value) fullEls[1].value = revEls[1].value;
+    for (const [fi, ri] of SC_SYNC) syncPair(revTr, fullRows[i], ri, fi);
   });
 }
+
+// okrFullTable:    [desc(0), owner(1), due(2), priority(3), %done(4), status(5), notes(6)]
+// okrReviewTable:  [desc(0), owner(1), due(2), status(3), %done(4), notes(5)]
+// Sync all except priority (full[3])
+const OKR_SYNC: [number, number][] = [[0, 0], [1, 1], [2, 2], [5, 3], [4, 4], [6, 5]]; // [fullIdx, revIdx]
 
 function syncOkrToReview(): void {
   const fullRows = document.querySelectorAll('#okrFullTable tbody tr');
   const reviewRows = document.querySelectorAll('#okrReviewTable tbody tr');
   fullRows.forEach((fullTr, i) => {
     if (i >= reviewRows.length) return;
-    const fullEls = fullTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    const revEls = reviewRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    // okrFullTable:    [skip num td, desc(0), owner(1), due(2), priority(3), %done(4), status(5), notes(6)]
-    // okrReviewTable:  [desc(0), owner(1), due(2), status(3), %done(4), notes(5)]
-    if (fullEls[0] && revEls[0] && revEls[0].value !== fullEls[0].value) revEls[0].value = fullEls[0].value;
-    if (fullEls[1] && revEls[1] && revEls[1].value !== fullEls[1].value) revEls[1].value = fullEls[1].value;
+    for (const [fi, ri] of OKR_SYNC) syncPair(fullTr, reviewRows[i], fi, ri);
   });
 }
 
@@ -415,10 +426,7 @@ function syncReviewToOkr(): void {
   const reviewRows = document.querySelectorAll('#okrReviewTable tbody tr');
   reviewRows.forEach((revTr, i) => {
     if (i >= fullRows.length) return;
-    const revEls = revTr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    const fullEls = fullRows[i].querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
-    if (revEls[0] && fullEls[0] && fullEls[0].value !== revEls[0].value) fullEls[0].value = revEls[0].value;
-    if (revEls[1] && fullEls[1] && fullEls[1].value !== revEls[1].value) fullEls[1].value = revEls[1].value;
+    for (const [fi, ri] of OKR_SYNC) syncPair(revTr, fullRows[i], ri, fi);
   });
 }
 
@@ -427,9 +435,15 @@ export function setupScorecardOkrSync(): void {
     if (_syncTimer) clearTimeout(_syncTimer);
     _syncTimer = setTimeout(fn, 100);
   };
-  document.getElementById('scorecardFullTable')?.addEventListener('input', () => debounceSync(syncScorecardToReview));
-  document.getElementById('scorecardTable')?.addEventListener('input', () => debounceSync(syncReviewToScorecard));
-  document.getElementById('okrFullTable')?.addEventListener('input', () => debounceSync(syncOkrToReview));
-  document.getElementById('okrReviewTable')?.addEventListener('input', () => debounceSync(syncReviewToOkr));
+  const listen = (id: string, fn: () => void) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => debounceSync(fn));
+    el.addEventListener('change', () => debounceSync(fn));
+  };
+  listen('scorecardFullTable', syncScorecardToReview);
+  listen('scorecardTable', syncReviewToScorecard);
+  listen('okrFullTable', syncOkrToReview);
+  listen('okrReviewTable', syncReviewToOkr);
 }
 

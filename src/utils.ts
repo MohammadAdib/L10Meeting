@@ -99,7 +99,14 @@ function closeActivePicker(): void {
   }
 }
 
+let _pickerAbort: AbortController | null = null;
+
 export function initPersonPickers(): void {
+  // Abort previous listeners to avoid duplicates across navigations
+  if (_pickerAbort) _pickerAbort.abort();
+  _pickerAbort = new AbortController();
+  const { signal } = _pickerAbort;
+
   // Clear button handler
   document.addEventListener('click', (e) => {
     const clearBtn = (e.target as HTMLElement).closest('.person-picker-clear') as HTMLElement | null;
@@ -118,7 +125,7 @@ export function initPersonPickers(): void {
       closeActivePicker();
       return;
     }
-  });
+  }, { signal });
 
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.person-picker-btn') as HTMLElement | null;
@@ -141,7 +148,7 @@ export function initPersonPickers(): void {
     if (_activePickerDropdown && !(e.target as HTMLElement).closest('.person-picker-dropdown')) {
       closeActivePicker();
     }
-  });
+  }, { signal });
 }
 
 let _pickerIdCounter = 0;

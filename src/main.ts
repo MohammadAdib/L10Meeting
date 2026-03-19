@@ -1,7 +1,7 @@
 import './style.css';
 import { buildAppHTML } from './html';
 import { initTimers, toggleTimer, resetTimer, cleanupTimers } from './timer';
-import { onStatusChange, confirmDialog, initPersonPickers } from './utils';
+import { onStatusChange, confirmDialog, initPersonPickers, populateTableRows } from './utils';
 import { loadMeetingData, loadScorecardOkrData, setupAutoSave, snapshotCleanState, markMeetingStarted, markMeetingStopped, isMeetingActive, isMeetingDirty, cleanupAutoSave, disableAutoSave, forceSave, setupScorecardOkrSync } from './storage';
 import { DEFAULT_MEASURABLES, DEFAULT_ROWS, MAX_ROWS } from './types';
 import { renderAdminPortal, renderDepartmentView } from './admin';
@@ -441,25 +441,15 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
           if (scRows && scRows.length > 0) {
             const scTbody = document.querySelector('#scorecardTable tbody');
             if (scTbody) scTbody.innerHTML = '';
-            scRows.forEach((cells: string[]) => {
-              addScorecardRow(cells[0] || '');
-              const tr = document.querySelector('#scorecardTable tbody tr:last-child');
-              if (!tr) return;
-              const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-              [1, 2].forEach(ci => { if (ci < els.length && ci < cells.length) els[ci].value = cells[ci]; });
-            });
+            for (let i = 0; i < scRows.length; i++) addScorecardRow();
+            populateTableRows('#scorecardTable', scRows);
           }
           const okrRows = (lastData.okrReviewTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
           if (okrRows && okrRows.length > 0) {
             const okrTbody = document.querySelector('#okrReviewTable tbody');
             if (okrTbody) okrTbody.innerHTML = '';
-            okrRows.forEach((cells: string[]) => {
-              addOkrReviewRow(cells[0] || '');
-              const tr = document.querySelector('#okrReviewTable tbody tr:last-child');
-              if (!tr) return;
-              const els = tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
-              [1, 2].forEach(ci => { if (ci < els.length && ci < cells.length) els[ci].value = cells[ci]; });
-            });
+            for (let i = 0; i < okrRows.length; i++) addOkrReviewRow();
+            populateTableRows('#okrReviewTable', okrRows);
           }
           loadScorecardOkrData(lastData);
         }
