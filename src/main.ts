@@ -452,6 +452,18 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
             populateTableRows('#okrReviewTable', okrRows);
           }
           loadScorecardOkrData(lastData);
+
+          // Carry over new to-dos from last meeting into to-do review
+          const newTodos = (lastData.newTodoTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+          if (newTodos && newTodos.length > 0) {
+            const todoTbody = document.querySelector('#todoReviewTable tbody');
+            if (todoTbody) todoTbody.innerHTML = '';
+            // newTodoTable: [todo, owner, due, priority, status, notes]
+            // todoReviewTable: [todo, owner, due, status, addToIDS, notes]
+            const mapped = newTodos.map(r => [r[0] || '', r[1] || '', r[2] || '', r[4] || '', '', r[5] || '']);
+            for (let i = 0; i < mapped.length; i++) addTodoReviewRow();
+            populateTableRows('#todoReviewTable', mapped);
+          }
         }
       }
     } catch { /* silent */ }
