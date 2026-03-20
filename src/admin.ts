@@ -63,7 +63,8 @@ function buildCalendarView(todoRows: string[][], cascadingRows: string[][]): voi
 
   // Sort dates
   const sortedDates = [...byDate.keys()].sort();
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const formatDate = (d: string) => {
     const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);

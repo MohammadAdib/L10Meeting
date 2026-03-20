@@ -414,7 +414,7 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
   app.innerHTML = buildAppHTML(deptName);
 
   const now = new Date();
-  (document.getElementById('metaDate') as HTMLInputElement).value = now.toISOString().split('T')[0];
+  (document.getElementById('metaDate') as HTMLInputElement).value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   (document.getElementById('metaTeam') as HTMLInputElement).value = deptName;
 
   const isExisting = meetingId !== 'new';
@@ -573,7 +573,8 @@ function initStandaloneMeeting(): void {
   resetIdsIssueCount();
   app.innerHTML = buildAppHTML('', true);
 
-  (document.getElementById('metaDate') as HTMLInputElement).value = new Date().toISOString().split('T')[0];
+  const nowStandalone = new Date();
+  (document.getElementById('metaDate') as HTMLInputElement).value = `${nowStandalone.getFullYear()}-${String(nowStandalone.getMonth() + 1).padStart(2, '0')}-${String(nowStandalone.getDate()).padStart(2, '0')}`;
 
   // Hide start/end time fields — shown after meeting ends
   const startTimeField = document.getElementById('metaStart')?.closest('.meta-field') as HTMLElement | null;
@@ -631,7 +632,8 @@ function initStandaloneMeeting(): void {
     const data = gatherMeetingData();
     const buffer = await fs.exportMeetingToBuffer(data);
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const date = (document.getElementById('metaDate') as HTMLInputElement)?.value || new Date().toISOString().split('T')[0];
+    const nowExport = new Date();
+    const date = (document.getElementById('metaDate') as HTMLInputElement)?.value || `${nowExport.getFullYear()}-${String(nowExport.getMonth() + 1).padStart(2, '0')}-${String(nowExport.getDate()).padStart(2, '0')}`;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `L10_Meeting_${date}.xlsx`;
