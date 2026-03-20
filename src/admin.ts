@@ -704,6 +704,10 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
     a: 'At the end of each L10, every attendee rates the meeting from 1–10. The team discusses any rating below 8. Over time, this feedback loop improves meeting quality and highlights process issues.',
   },
   {
+    q: 'What carries over from the previous meeting?',
+    a: 'When you start a new meeting, the following data is automatically carried forward from the most recent meeting:<br><strong>Scorecard</strong> — KPI names, owners, and goals.<br><strong>OKR / Rock Review</strong> — Descriptions and owners.<br><strong>Scorecard Tracker</strong> — Full rolling 13-week data.<br><strong>OKR Tracker</strong> — Full OKR data and key results.<br><strong>Issues List</strong> — All issues from the IDS section.<br><strong>To-Do Review</strong> — Last week\'s new to-dos become this week\'s review items (with status carried over).',
+  },
+  {
     q: 'How does the Excel template work?',
     a: 'The app uses a blank Excel template as the canonical format. Every meeting is saved as a .xlsx file with a fixed layout. You can download the template from the sidebar and open it in Excel independently. When you import an Excel file, it must follow the same layout.',
   },
