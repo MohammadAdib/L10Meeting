@@ -72,13 +72,16 @@ export function addTodoReviewRow(): void {
 
 export function updateTodoCompletion(): void {
   const rows = document.querySelectorAll('#todoReviewTable tbody tr');
-  let done = 0;
+  let done = 0, total = 0;
   rows.forEach(r => {
+    const els = r.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+    if (Array.from(els).every(el => !el.value.trim())) return;
+    total++;
     const sel = r.querySelector('select') as HTMLSelectElement | null;
     if (sel?.value === 'Done') done++;
   });
   const el = document.getElementById('todoCompletionNum');
-  if (el) el.textContent = `${done} / ${rows.length}`;
+  if (el) el.textContent = `${done} / ${total}`;
 }
 
 export function addIssueRow(): void {

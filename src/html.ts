@@ -188,8 +188,11 @@ export function buildAppHTML(deptName?: string, standalone = false): string {
     `)}
 
     ${sectionCard(7, 'CONCLUDE', '5:00', 'body-7', `
-      <h3 class="sub-heading" style="margin-top:14px;">New To-Do List — This Week's Commitments</h3>
-      ${tableHTML('newTodoTable', ['To-Do', 'Owner', 'Due Date', 'w:90:Priority', 'w:110:Status', 'w:250:Notes', 'w:30:'])}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+        <h3 class="sub-heading" style="margin:0;">New To-Do List — This Week's Commitments</h3>
+        <button class="btn btn-sm" id="btnPopulateFromIDS" style="background:var(--accent);color:#000;font-weight:700;">Populate from IDS</button>
+      </div>
+      <div style="margin-top:12px">${tableHTML('newTodoTable', ['To-Do', 'Owner', 'Due Date', 'w:90:Priority', 'w:110:Status', 'w:250:Notes', 'w:30:'])}</div>
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddNewTodo">+ Add To-Do</button>
 
       <h3 class="sub-heading sub-heading-spaced">Cascading Messages — What needs to be shared?</h3>

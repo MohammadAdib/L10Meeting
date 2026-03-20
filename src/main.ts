@@ -351,6 +351,47 @@ function setupMeetingUI(opts: MeetingUIOptions): MeetingUIResult {
   document.getElementById('btnAddIssue')?.addEventListener('click', () => addOrToast('#issuesListTable tbody tr', addIssueRow));
   document.getElementById('btnAddIDSIssue')?.addEventListener('click', () => addOrToast('#idsIssuesContainer .ids-issue', addIDSIssue));
   document.getElementById('btnAddNewTodo')?.addEventListener('click', () => addOrToast('#newTodoTable tbody tr', addNewTodoRow));
+  document.getElementById('btnPopulateFromIDS')?.addEventListener('click', () => {
+    // Gather all non-empty to-do rows from IDS issue blocks
+    const idsTodos: string[][] = [];
+    document.querySelectorAll('#idsIssuesContainer .ids-issue').forEach(block => {
+      block.querySelectorAll<HTMLTableRowElement>('.data-table tbody tr').forEach(tr => {
+        const cells: string[] = [];
+        tr.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')
+          .forEach(el => cells.push(el.value));
+        if (cells.some(c => c.trim())) idsTodos.push(cells);
+      });
+    });
+    if (idsTodos.length === 0) return;
+    const tb = document.querySelector('#newTodoTable tbody');
+    if (!tb) return;
+    // Find empty rows first, then add new ones if needed
+    const getEmptyOrNewRow = (): HTMLTableRowElement => {
+      const rows = tb.querySelectorAll('tr');
+      for (const row of rows) {
+        const els = row.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+        if (Array.from(els).every(el => !el.value.trim())) return row as HTMLTableRowElement;
+      }
+      addNewTodoRow();
+      return tb.querySelector('tr:last-child') as HTMLTableRowElement;
+    };
+    for (const todo of idsTodos) {
+      const lastRow = getEmptyOrNewRow();
+      const els = lastRow.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
+      todo.forEach((v, i) => {
+        if (i < els.length) {
+          els[i].value = v;
+          if (els[i] instanceof HTMLSelectElement) onStatusChange(els[i] as HTMLSelectElement);
+          if (els[i].classList.contains('person-value')) {
+            const picker = els[i].parentElement;
+            const btn = picker?.querySelector('.person-picker-btn');
+            if (btn) btn.textContent = v || '';
+            if (picker) picker.classList.toggle('has-value', !!v);
+          }
+        }
+      });
+    }
+  });
   document.getElementById('btnAddCascading')?.addEventListener('click', () => addOrToast('#cascadingTable tbody tr', addCascadingRow));
   document.getElementById('btnAddRating')?.addEventListener('click', () => addOrToast('#ratingTable tbody tr', addRatingRow));
   document.getElementById('btnAddScorecardFull')?.addEventListener('click', () => addOrToast('#scorecardFullTable tbody tr', addScorecardFullRow));
