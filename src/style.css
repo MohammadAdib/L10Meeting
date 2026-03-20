@@ -1426,6 +1426,11 @@ td:has(.person-picker) { vertical-align: middle; }
   flex-direction: column;
   gap: 6px;
 }
+.ratings-chart {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
 .meeting-item {
   display: flex;
   align-items: center;
@@ -1829,7 +1834,7 @@ td:has(.person-picker) { vertical-align: middle; }
 }
 
 /* ── MOBILE / NARROW ── */
-@media (max-width: 768px) {
+@media (max-aspect-ratio: 1/1) {
   /* Top bar: compact */
   .top-bar { padding: 0 8px; min-height: 44px; }
   .top-bar-left { gap: 8px; }
@@ -1880,7 +1885,8 @@ td:has(.person-picker) { vertical-align: middle; }
     border-left-color: transparent;
     border-bottom-color: var(--accent);
   }
-  .sidebar-label { display: none; }
+  .sidebar:not(.admin-sidebar) .sidebar-label { display: none; }
+  .admin-sidebar .sidebar-meta { display: none; }
   .sidebar-num { width: 22px; height: 22px; font-size: 11px; }
 
   /* Main content: full width */
@@ -1963,9 +1969,10 @@ td:has(.person-picker) { vertical-align: middle; }
   .dept-header { flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
   .dept-header h1 { font-size: 20px; }
 
-  /* Dept layout: stack vertically */
+  /* Dept layout: stack vertically, people & meetings side by side */
   .dept-layout { flex-direction: column; gap: 16px; }
-  .dept-left { flex: none; width: 100%; }
+  .dept-left { flex: none; width: 100%; display: flex; flex-wrap: wrap; gap: 16px; }
+  .dept-left .dept-section { flex: 1 1 330px; min-width: 0; margin-bottom: 0; min-height: 400px; max-height: 500px; overflow-y: auto; }
   .dept-right { flex: none; width: 100%; }
   /* Dept sections: less padding */
   .dept-section { padding: 14px; }

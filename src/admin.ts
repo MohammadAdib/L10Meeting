@@ -318,6 +318,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
           <div class="meetings-list">
             ${meetingItems || '<div class="admin-empty" style="padding:12px;">No meetings yet.</div>'}
           </div>
+          <canvas id="ratingsChart" class="ratings-chart" style="display:none"></canvas>
         </div>
       </div>
 
@@ -471,8 +472,82 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
           if (dp) dateEl.textContent = `${parseInt(dp[2])}/${dp[3]}/${dp[1]}`;
         }
       }
+      // Draw ratings chart
+      const withRatings = rated.filter(m => m.avgRating > 0).reverse().slice(-12); // last 12, chronological
+      drawRatingsChart(withRatings);
     });
   }
+}
+
+function drawRatingsChart(meetings: { date: string; avgRating: number }[]): void {
+  const canvas = document.getElementById('ratingsChart') as HTMLCanvasElement | null;
+  if (!canvas || meetings.length < 2) return;
+  canvas.style.display = '';
+
+  function render() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas!.parentElement!.clientWidth - 40; // account for section padding
+    const h = 100;
+    canvas!.width = w * dpr;
+    canvas!.height = h * dpr;
+    canvas!.style.width = `${w}px`;
+    canvas!.style.height = `${h}px`;
+
+    const ctx = canvas!.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+
+    const maxR = 10;
+    const padL = 24, padR = 8, padT = 12, padB = 20;
+    const chartW = w - padL - padR;
+    const chartH = h - padT - padB;
+
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'right';
+    for (const v of [0, 5, 10]) {
+      const y = padT + chartH - (v / maxR) * chartH;
+      ctx.fillText(String(v), padL - 6, y + 3);
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + chartW, y);
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    const step = Math.max(1, Math.floor(meetings.length / 5));
+    meetings.forEach((m, i) => {
+      if (i % step !== 0 && i !== meetings.length - 1) return;
+      const x = padL + (i / (meetings.length - 1)) * chartW;
+      const dp = m.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const label = dp ? `${parseInt(dp[2])}/${dp[3]}` : '';
+      ctx.fillText(label, x, h - 4);
+    });
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#ff8c42';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    meetings.forEach((m, i) => {
+      const x = padL + (i / (meetings.length - 1)) * chartW;
+      const y = padT + chartH - (m.avgRating / maxR) * chartH;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    meetings.forEach((m, i) => {
+      const x = padL + (i / (meetings.length - 1)) * chartW;
+      const y = padT + chartH - (m.avgRating / maxR) * chartH;
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff8c42';
+      ctx.fill();
+    });
+  }
+
+  render();
+  new ResizeObserver(() => render()).observe(canvas.parentElement!);
 }
 
 function wireContentEvents(deptName: string): void {
