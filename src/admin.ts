@@ -11,6 +11,13 @@ import { DEFAULT_ROWS, MAX_ROWS } from './types';
 let _selectedDept: string | null = null;
 let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
+function formatCellValue(v: string): string {
+  if (!v) return '';
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${parseInt(m[2])}/${m[3]}/${m[1]}`;
+  return v;
+}
+
 /** Populate a read-only dept table by creating input rows from data */
 function populateDeptTable(selector: string, rows: string[][]): void {
   const tb = document.querySelector(`${selector} tbody`);
@@ -21,10 +28,69 @@ function populateDeptTable(selector: string, rows: string[][]): void {
     const tr = document.createElement('tr');
     const cols = rows[i] || [];
     tr.innerHTML = Array.from({ length: colCount }, (_, ci) =>
-      `<td><input value="${(cols[ci] || '').replace(/"/g, '&quot;')}" disabled></td>`
+      `<td><input value="${formatCellValue(cols[ci] || '').replace(/"/g, '&quot;')}" disabled></td>`
     ).join('');
     tb.appendChild(tr);
   }
+}
+
+function buildCalendarView(todoRows: string[][], cascadingRows: string[][]): void {
+  const container = document.getElementById('deptCalendarView');
+  if (!container) return;
+
+  // Collect items with dates
+  type CalItem = { label: string; owner: string; date: string; type: 'todo' | 'cascading'; done: boolean };
+  const items: CalItem[] = [];
+
+  for (const r of todoRows) {
+    if (!r[0]?.trim() || !r[2]?.trim()) continue;
+    items.push({ label: r[0], owner: r[1] || '', date: r[2], type: 'todo', done: (r[4] || '').toLowerCase().includes('done') });
+  }
+  for (const r of cascadingRows) {
+    if (!r[0]?.trim() || !r[2]?.trim()) continue;
+    items.push({ label: r[0], owner: r[3] || '', date: r[2], type: 'cascading', done: (r[5] || '').toLowerCase().includes('yes') });
+  }
+
+  if (items.length === 0) return;
+
+  // Group by date
+  const byDate = new Map<string, CalItem[]>();
+  for (const item of items) {
+    const key = item.date;
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key)!.push(item);
+  }
+
+  // Sort dates
+  const sortedDates = [...byDate.keys()].sort();
+  const today = new Date().toISOString().split('T')[0];
+
+  const formatDate = (d: string) => {
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return d;
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dt = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    return `${days[dt.getDay()]} ${parseInt(m[2])}/${m[3]}`;
+  };
+
+  let html = '';
+  for (const date of sortedDates) {
+    const dateItems = byDate.get(date)!;
+    const isPast = date < today;
+    const isToday = date === today;
+    html += `<div class="cal-day${isToday ? ' cal-today' : ''}${isPast ? ' cal-past' : ''}">
+      <div class="cal-date">${formatDate(date)}${isToday ? ' <span class="cal-today-badge">Today</span>' : ''}</div>
+      <div class="cal-items">
+        ${dateItems.map(item => `<div class="cal-item cal-${item.type}${item.done ? ' cal-done' : ''}">
+          <span class="cal-dot"></span>
+          <span class="cal-label">${item.label}</span>
+          <span class="cal-owner">${item.owner}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  container.innerHTML = html;
 }
 
 function savePeopleDebounced(deptName: string): void {
@@ -370,6 +436,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
 
       populateDeptTable('#deptNewTodoTable', newTodoRows);
       populateDeptTable('#deptCascadingTable', cascadingRows);
+      buildCalendarView(newTodoRows, cascadingRows);
 
       // Apply read-only and reveal
       const dr = document.querySelector<HTMLElement>('.dept-right');

@@ -47,8 +47,9 @@ export function buildIDSContent(): string {
 /** Reusable To-Dos section HTML (used in dept view) */
 export function buildTodosContent(): string {
   return `
+    <div id="deptCalendarView" class="dept-calendar"></div>
     <div class="section-card">
-      <div class="section-header" style="cursor:default"><h2>NEW TO-DO LIST</h2></div>
+      <div class="section-header" style="cursor:default"><h2>TO-DO LIST</h2></div>
       <div class="section-body">
         <p class="section-desc">This week's commitments from the most recent meeting.</p>
         ${tableHTML('deptNewTodoTable', ['To-Do', 'w:130:Owner', 'w:110:Due Date', 'w:90:Priority', 'w:110:Status', 'w:250:Notes', 'w:30:'])}
