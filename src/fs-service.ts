@@ -252,13 +252,24 @@ export async function getDepartments(): Promise<{ name: string; peopleCount: num
   if (!_rootHandle) return cacheGet(ck) ?? [];
   try {
     const deps = await _rootHandle.getDirectoryHandle('Departments');
-    const results: { name: string; peopleCount: number }[] = [];
+    const results: { name: string; peopleCount: number; lastMeetingDate: string }[] = [];
     for await (const entry of (deps as any).values()) {
       if (entry.kind !== 'directory') continue;
       const content = await readTextFile(entry, 'people.txt');
       const peopleCount = content.trim() ? content.trim().split('\n').filter(Boolean).length : 0;
-      results.push({ name: entry.name, peopleCount });
+      // Find most recent meeting date from filenames
+      let lastMeetingDate = '';
+      try {
+        const meetings = await entry.getDirectoryHandle('meetings');
+        for await (const file of (meetings as any).values()) {
+          if (file.kind !== 'file' || !file.name.endsWith('.xlsx')) continue;
+          const dm = file.name.match(/(\d{4}-\d{2}-\d{2})/);
+          if (dm && dm[1] > lastMeetingDate) lastMeetingDate = dm[1];
+        }
+      } catch { /* no meetings dir */ }
+      results.push({ name: entry.name, peopleCount, lastMeetingDate });
     }
+    results.sort((a, b) => b.lastMeetingDate.localeCompare(a.lastMeetingDate));
     cacheSet(ck, results);
     return results;
   } catch {
