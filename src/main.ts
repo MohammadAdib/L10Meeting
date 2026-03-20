@@ -494,6 +494,15 @@ async function initMeetingView(deptName: string, meetingId: string): Promise<voi
           }
           loadScorecardOkrData(lastData);
 
+          // Carry over issues list from last meeting
+          const issuesRows = (lastData.issuesListTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
+          if (issuesRows && issuesRows.length > 0) {
+            const issTbody = document.querySelector('#issuesListTable tbody');
+            if (issTbody) issTbody.innerHTML = '';
+            for (let i = 0; i < issuesRows.length; i++) addIssueRow();
+            populateTableRows('#issuesListTable', issuesRows);
+          }
+
           // Carry over new to-dos from last meeting into to-do review
           const newTodos = (lastData.newTodoTable as string[][] | undefined)?.filter((r: string[]) => r.some(c => c));
           if (newTodos && newTodos.length > 0) {

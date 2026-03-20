@@ -167,7 +167,7 @@ function buildMeetingItemsHtml(meetings: { id: string; date: string; avgRating: 
     return `
       <div class="meeting-item" data-id="${m.id}">
         <div class="meeting-item-date">${displayDate}</div>
-        <div class="meeting-item-rating" id="rating-${m.id}">${buildRatingHtml(m.avgRating)}</div>
+        <div class="meeting-item-rating" id="rating-${m.id}"></div>
         <button class="meeting-item-delete btn btn-outline-dark btn-sm" data-id="${m.id}" title="Delete meeting">&times;</button>
       </div>
     `;
@@ -363,7 +363,11 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
       if (_selectedDept !== deptName) return;
       for (const m of rated) {
         const el = document.getElementById(`rating-${m.id}`);
-        if (el) el.innerHTML = buildRatingHtml(m.avgRating);
+        if (el) {
+          el.style.opacity = '0';
+          el.innerHTML = buildRatingHtml(m.avgRating);
+          requestAnimationFrame(() => { el.style.transition = 'opacity 150ms ease'; el.style.opacity = '1'; });
+        }
         // Update date from file contents
         const item = document.querySelector<HTMLElement>(`.meeting-item[data-id="${m.id}"]`);
         const dateEl = item?.querySelector('.meeting-item-date');
