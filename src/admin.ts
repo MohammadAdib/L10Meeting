@@ -1,6 +1,6 @@
 import { getLogoUrl, handleLogoClick } from './logo';
 import { confirmDialog, populateTableRows } from './utils';
-import { buildScorecardContent, buildOkrsContent, buildIDSContent } from './html';
+import { buildScorecardContent, buildOkrsContent, buildIDSContent, buildTodosContent } from './html';
 import { addScorecardFullRow, addOkrFullRow, buildKeyResultBlocks, addIssueRow, addIDSIssue, addIDSTodoRow, resetIdsIssueCount } from './tables';
 import { loadScorecardOkrData } from './storage';
 import * as fs from './fs-service';
@@ -10,6 +10,22 @@ import { DEFAULT_ROWS, MAX_ROWS } from './types';
 
 let _selectedDept: string | null = null;
 let _peopleSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Populate a read-only dept table by creating input rows from data */
+function populateDeptTable(selector: string, rows: string[][]): void {
+  const tb = document.querySelector(`${selector} tbody`);
+  if (!tb) return;
+  const colCount = document.querySelectorAll(`${selector} thead th`).length;
+  const count = Math.max(rows.length, 1);
+  for (let i = 0; i < count; i++) {
+    const tr = document.createElement('tr');
+    const cols = rows[i] || [];
+    tr.innerHTML = Array.from({ length: colCount }, (_, ci) =>
+      `<td><input value="${(cols[ci] || '').replace(/"/g, '&quot;')}" disabled></td>`
+    ).join('');
+    tb.appendChild(tr);
+  }
+}
 
 function savePeopleDebounced(deptName: string): void {
   if (_peopleSaveTimer) clearTimeout(_peopleSaveTimer);
@@ -241,11 +257,15 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
       <div class="dept-right dept-readonly${meetings.length === 0 ? ' dept-no-meetings' : ' dept-loading'}">
         <div class="dept-readonly-label">${meetings.length > 0 ? `From most recent meeting (${meetings[0].date})` : 'From most recent meeting — no meetings yet'}</div>
         <div class="dept-tabs">
-          <button class="dept-tab active" data-dept-tab="ids">IDS</button>
+          <button class="dept-tab active" data-dept-tab="todos">To-Dos</button>
+          <button class="dept-tab" data-dept-tab="ids">IDS</button>
           <button class="dept-tab" data-dept-tab="scorecard">Scorecard</button>
           <button class="dept-tab" data-dept-tab="okrs">OKRs</button>
         </div>
-        <div class="dept-tab-content active" id="dept-tab-ids">
+        <div class="dept-tab-content active" id="dept-tab-todos">
+          ${buildTodosContent()}
+        </div>
+        <div class="dept-tab-content" id="dept-tab-ids">
           ${buildIDSContent()}
         </div>
         <div class="dept-tab-content" id="dept-tab-scorecard">
@@ -343,6 +363,13 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
           }
         });
       }
+
+      // New To-Do and Cascading tables
+      const newTodoRows = (lastMeetingData?.newTodoTable as string[][] | undefined) || [];
+      const cascadingRows = (lastMeetingData?.cascadingTable as string[][] | undefined) || [];
+
+      populateDeptTable('#deptNewTodoTable', newTodoRows);
+      populateDeptTable('#deptCascadingTable', cascadingRows);
 
       // Apply read-only and reveal
       const dr = document.querySelector<HTMLElement>('.dept-right');

@@ -44,6 +44,25 @@ export function buildIDSContent(): string {
     </div>`;
 }
 
+/** Reusable To-Dos section HTML (used in dept view) */
+export function buildTodosContent(): string {
+  return `
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>NEW TO-DO LIST</h2></div>
+      <div class="section-body">
+        <p class="section-desc">This week's commitments from the most recent meeting.</p>
+        ${tableHTML('deptNewTodoTable', ['To-Do', 'w:130:Owner', 'w:110:Due Date', 'w:90:Priority', 'w:110:Status', 'w:250:Notes', 'w:30:'])}
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-header" style="cursor:default"><h2>CASCADING MESSAGES</h2></div>
+      <div class="section-body">
+        <p class="section-desc">What needs to be shared with the organization.</p>
+        ${tableHTML('deptCascadingTable', ['Message', 'w:130:To Whom', 'w:110:By When', 'w:130:By Whom', 'w:120:Channel', 'w:80:Done?', 'w:30:'])}
+      </div>
+    </div>`;
+}
+
 /** Reusable Scorecard section HTML (used in both meeting tab and dept view) */
 export function buildScorecardContent(): string {
   return `
