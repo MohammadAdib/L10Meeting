@@ -824,13 +824,13 @@ function writeJsonToWorkbook(wb: ExcelJS.Workbook, ws: ExcelJS.Worksheet, data: 
     { col: 'B', startRow: 37, count: 7, options: ['Customer', 'Employee'] },
     { col: 'D', startRow: 37, count: 7, options: ['Yes', 'No'] },
     { col: 'E', startRow: 37, count: 7, options: ['Yes', 'No'] },
-    { col: 'D', startRow: 47, count: 7, options: ['Open', 'Done', 'Carry Over'] },
+    { col: 'D', startRow: 47, count: 7, options: ['Open', 'Done', 'Carry Over', "Won't Do"] },
     { col: 'E', startRow: 47, count: 7, options: ['Yes', 'No'] },
     { col: 'C', startRow: 60, count: 16, options: ['High', 'Medium', 'Low'] },
     { col: 'D', startRow: 60, count: 16, options: ['Open', 'Solved', 'Next Meeting', 'Dropped'] },
     { col: 'F', startRow: 60, count: 16, options: ['Yes', 'No'] },
     { col: 'D', startRow: 171, count: 11, options: ['High', 'Medium', 'Low'] },
-    { col: 'E', startRow: 171, count: 11, options: ['Not Started', 'In Progress', 'Done'] },
+    { col: 'E', startRow: 171, count: 11, options: ['Not Started', 'In Progress', 'Done', "Won't Do"] },
     { col: 'F', startRow: 184, count: 6, options: ['Yes', 'No'] },
   ];
   for (const v of validations) {

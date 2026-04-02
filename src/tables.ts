@@ -65,7 +65,7 @@ export function addTodoReviewRow(): void {
   const tb = document.querySelector('#todoReviewTable tbody');
   if (atCap(tb, MAX_ROWS.todoReview)) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="To-do item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="To-do item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over', "Won't Do"])}</td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
   tr.querySelector('select')?.addEventListener('change', () => window.__updateTodoCompletion());
 }
@@ -141,7 +141,7 @@ export function addIDSTodoRow(issueN: number): void {
   const tb = document.querySelector(`#idsTodo-${issueN} tbody`);
   if (atCap(tb, MAX_ROWS.idsTodos)) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over', "Won't Do"])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 
@@ -149,7 +149,7 @@ export function addNewTodoRow(): void {
   const tb = document.querySelector('#newTodoTable tbody');
   if (atCap(tb, MAX_ROWS.newTodos)) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over'])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Action item"></td><td>${personSelect()}</td><td><input type="date"></td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Done', 'Carry Over', "Won't Do"])}</td><td><input placeholder="Notes"></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 

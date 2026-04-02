@@ -39,16 +39,17 @@ function buildCalendarView(todoRows: string[][], cascadingRows: string[][]): voi
   if (!container) return;
 
   // Collect items with dates
-  type CalItem = { label: string; owner: string; date: string; type: 'todo' | 'cascading'; done: boolean };
+  type CalItem = { label: string; owner: string; date: string; type: 'todo' | 'cascading'; done: boolean; wontDo: boolean };
   const items: CalItem[] = [];
 
   for (const r of todoRows) {
     if (!r[0]?.trim() || !r[2]?.trim()) continue;
-    items.push({ label: r[0], owner: r[1] || '', date: r[2], type: 'todo', done: (r[4] || '').toLowerCase().includes('done') });
+    const status = (r[4] || '').toLowerCase();
+    items.push({ label: r[0], owner: r[1] || '', date: r[2], type: 'todo', done: status.includes('done'), wontDo: status.includes("won't do") });
   }
   for (const r of cascadingRows) {
     if (!r[0]?.trim() || !r[2]?.trim()) continue;
-    items.push({ label: r[0], owner: r[3] || '', date: r[2], type: 'cascading', done: (r[5] || '').toLowerCase().includes('yes') });
+    items.push({ label: r[0], owner: r[3] || '', date: r[2], type: 'cascading', done: (r[5] || '').toLowerCase().includes('yes'), wontDo: false });
   }
 
   if (items.length === 0) return;
@@ -82,11 +83,14 @@ function buildCalendarView(todoRows: string[][], cascadingRows: string[][]): voi
     html += `<div class="cal-day${isToday ? ' cal-today' : ''}${isPast ? ' cal-past' : ''}">
       <div class="cal-date">${formatDate(date)}${isToday ? ' <span class="cal-today-badge">Today</span>' : ''}</div>
       <div class="cal-items">
-        ${dateItems.map(item => `<div class="cal-item cal-${item.type}${item.done ? ' cal-done' : ''}">
+        ${dateItems.map(item => {
+          const overdue = item.wontDo || (isPast && !item.done && !item.wontDo);
+          return `<div class="cal-item cal-${item.type}${item.done ? ' cal-done' : ''}${item.wontDo ? ' cal-wontdo' : ''}${overdue ? ' cal-overdue' : ''}">
           <span class="cal-dot"></span>
           <span class="cal-label">${item.label}</span>
           <span class="cal-owner">${item.owner}</span>
-        </div>`).join('')}
+        </div>`;
+        }).join('')}
       </div>
     </div>`;
   }

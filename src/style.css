@@ -1348,6 +1348,9 @@ td:has(.person-picker) { vertical-align: middle; }
 .cal-todo .cal-dot { background: var(--accent); }
 .cal-cascading .cal-dot { background: var(--blue, #3b82f6); }
 .cal-done { opacity: .4; text-decoration: line-through; }
+.cal-overdue { opacity: 1 !important; }
+.cal-overdue .cal-dot { background: #dc2626 !important; }
+.cal-wontdo { text-decoration: line-through; }
 .cal-label { flex: 1; }
 .cal-owner { font-size: 11px; color: var(--text-muted); }
 
