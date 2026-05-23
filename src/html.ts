@@ -200,7 +200,7 @@ export function buildAppHTML(deptName?: string, standalone = false): string {
 
     ${sectionCard(6, 'IDS — IDENTIFY, DISCUSS, SOLVE', '60:00', 'body-6', `
       <p class="section-desc">IDENTIFY — Build the Issues List (vote to prioritize top 3 before discussing)</p>
-      ${tableHTML('issuesListTable', ['w:250:Issue / Obstacle', 'w:130:Raised By', 'w:90:Priority', 'w:110:Status', 'w:80:Time Est.', 'w:90:Next Mtg?', 'w:30:'])}
+      ${tableHTML('issuesListTable', ['Issue / Obstacle', 'w:130:Raised By', 'w:90:Priority', 'w:110:Status', 'w:80:Time Est.', 'w:90:Next Mtg?', 'w:30:'])}
       <button class="btn btn-outline-dark btn-sm add-row-btn" id="btnAddIssue">+ Add Issue</button>
       <h3 style="margin:24px 0 12px;font-size:14px;color:var(--text-dim);">DISCUSS & SOLVE — IDS each issue completely before moving to the next</h3>
       <div id="idsIssuesContainer"></div>
