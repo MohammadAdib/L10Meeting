@@ -129,14 +129,21 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     populateTableRows(`#${tableId}`, rows);
   }
 
-  // IDS blocks — add extra blocks if needed, then populate fields and todos
+  // IDS blocks — trim trailing empty blocks, add extra blocks if needed, then populate fields and todos
   const idsBlocks = data.idsBlocks as { fields: string[]; todos: string[][] }[] | undefined;
   if (idsBlocks) {
+    let lastFilled = -1;
+    idsBlocks.forEach((b, i) => {
+      const filled = b.fields?.some(f => f?.trim()) || b.todos?.some(t => t?.some(c => c?.trim()));
+      if (filled) lastFilled = i;
+    });
+    const trimmed = idsBlocks.slice(0, lastFilled + 1);
+
     const existingBlocks = document.querySelectorAll('#idsIssuesContainer .ids-issue').length;
-    for (let i = existingBlocks; i < idsBlocks.length; i++) addIDSIssue();
+    for (let i = existingBlocks; i < trimmed.length; i++) addIDSIssue();
 
     const blocks = document.querySelectorAll('#idsIssuesContainer .ids-issue');
-    idsBlocks.forEach((block, bi) => {
+    trimmed.forEach((block, bi) => {
       if (bi >= blocks.length) return;
       const tas = blocks[bi].querySelectorAll<HTMLTextAreaElement>('.ids-field textarea');
       block.fields.forEach((v, fi) => { if (fi < tas.length) tas[fi].value = v; });

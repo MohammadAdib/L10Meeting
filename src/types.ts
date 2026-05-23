@@ -29,7 +29,7 @@ export const DEFAULT_ROWS = {
   headlines: 7,
   todoReview: 7,
   issues: 16,
-  idsIssues: 10,
+  idsIssues: 1,
   newTodos: 11,
   cascading: 6,
   rating: 10,
