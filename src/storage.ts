@@ -249,10 +249,18 @@ function checkDirty(): boolean {
 export function markMeetingStarted(): void {
   _meetingStarted = true;
   _meetingDirty = true;
+  if (_manualSaveMode) {
+    const btn = document.getElementById('btnSaveMeeting');
+    if (btn) btn.style.display = 'none';
+  }
 }
 
 export function markMeetingStopped(): void {
   _meetingStarted = false;
+  if (_manualSaveMode) {
+    const btn = document.getElementById('btnSaveMeeting');
+    if (btn) btn.style.display = checkDirty() ? '' : 'none';
+  }
 }
 
 export function isMeetingActive(): boolean {
@@ -295,7 +303,7 @@ export function setupAutoSave(dept: string, meetingId: string, isNew: boolean = 
         const dirty = checkDirty();
         _meetingDirty = dirty;
         const btn = document.getElementById('btnSaveMeeting');
-        if (btn) btn.style.display = dirty ? '' : 'none';
+        if (btn) btn.style.display = (dirty && !_meetingStarted) ? '' : 'none';
       }, 300);
     };
     container.addEventListener('input', checkAndShow, { signal });
