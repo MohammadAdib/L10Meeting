@@ -177,6 +177,13 @@ export function loadMeetingData(data: Record<string, unknown>): void {
     });
   }
 
+  // Trim rating rows where nobody rated and no comment was left
+  document.querySelectorAll<HTMLTableRowElement>('#ratingTable tbody tr').forEach(tr => {
+    const rating = parseInt(tr.querySelector<HTMLInputElement>('.rating-value')?.value || '0');
+    const comment = tr.querySelector<HTMLInputElement>('td:nth-child(3) input')?.value.trim() || '';
+    if (rating === 0 && !comment) tr.remove();
+  });
+
   updateTodoCompletion();
   updateAvgRating();
 }
