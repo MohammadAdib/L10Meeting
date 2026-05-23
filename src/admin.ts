@@ -451,7 +451,7 @@ async function loadDepartmentContent(deptName: string): Promise<void> {
           el.disabled = true;
         });
         dr.querySelectorAll<HTMLElement>('.person-picker').forEach(el => el.classList.add('disabled'));
-        dr.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete').forEach(el => {
+        dr.querySelectorAll<HTMLElement>('.add-row-btn, .row-delete, .row-solve').forEach(el => {
           el.style.display = 'none';
         });
         dr.classList.remove('dept-loading');

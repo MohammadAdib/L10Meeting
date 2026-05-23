@@ -88,7 +88,7 @@ export function addIssueRow(): void {
   const tb = document.querySelector('#issuesListTable tbody');
   if (atCap(tb, MAX_ROWS.issues)) return;
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><input placeholder="Issue / obstacle"></td><td>${personSelect()}</td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Solved', 'Next Meeting', 'Dropped'])}</td><td><input placeholder="e.g. 10 min" style="width:70px"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td>${deleteBtn()}</td>`;
+  tr.innerHTML = `<td><input placeholder="Issue / obstacle"></td><td>${personSelect()}</td><td>${statusSelect(['', 'High', 'Medium', 'Low'])}</td><td>${statusSelect(['', 'Open', 'Solved', 'Next Meeting', 'Dropped'])}</td><td><input placeholder="e.g. 10 min" style="width:70px"></td><td>${statusSelect(['', 'Yes', 'No'])}</td><td><button class="row-solve" onclick="window.__solveIssue(this)">Solve</button></td><td>${deleteBtn()}</td>`;
   tb.appendChild(tr);
 }
 

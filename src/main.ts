@@ -24,6 +24,7 @@ declare global {
     __setRating: typeof setRating;
     __addIDSTodoRow: typeof addIDSTodoRow;
     __addKeyResultRow: typeof addKeyResultRow;
+    __solveIssue: (btn: HTMLButtonElement) => void;
   }
 }
 window.__onStatusChange = onStatusChange;
@@ -39,6 +40,35 @@ window.__addKeyResultRow = (n: number) => {
   const before = document.querySelectorAll(`#keyResults-${n} tbody tr`).length;
   addKeyResultRow(n);
   if (document.querySelectorAll(`#keyResults-${n} tbody tr`).length === before) showCapToast();
+};
+window.__solveIssue = (btn: HTMLButtonElement) => {
+  const row = btn.closest('tr');
+  const issueText = row?.querySelector<HTMLInputElement>('input')?.value.trim();
+  if (!issueText) return;
+
+  const container = document.getElementById('idsIssuesContainer');
+  if (!container) return;
+
+  const blocks = Array.from(container.querySelectorAll<HTMLElement>('.ids-issue'));
+  let target = blocks.find(b => {
+    const ta = b.querySelector<HTMLTextAreaElement>('.ids-field textarea');
+    return ta && !ta.value.trim();
+  }) || null;
+
+  if (!target) {
+    if (blocks.length >= MAX_ROWS.idsBlocks) { showCapToast(); return; }
+    addIDSIssue();
+    target = container.querySelector<HTMLElement>('.ids-issue:last-child');
+  }
+  if (!target) return;
+
+  const issueTA = target.querySelector<HTMLTextAreaElement>('.ids-field textarea');
+  if (issueTA) issueTA.value = issueText;
+
+  target.querySelector('.ids-issue-header')?.classList.remove('collapsed');
+  target.querySelector('.ids-issue-body-wrap')?.classList.remove('collapsed');
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // ── Router ──

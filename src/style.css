@@ -481,6 +481,7 @@ body {
 .data-table th:last-child { border-radius: 0 6px 0 0; }
 .data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .data-table td:last-child { vertical-align: middle; }
+.data-table td:has(.row-solve) { vertical-align: middle; }
 .data-table tr:nth-child(even) td { background: var(--surface); }
 .data-table tr:nth-child(odd) td { background: var(--surface2); }
 .data-table tr:last-child td { border-bottom: none; }
@@ -527,6 +528,20 @@ body {
   transition: all .15s;
 }
 .row-delete:hover { color: var(--red); background: var(--red-bg); }
+.row-solve {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.row-solve:hover { opacity: .85; }
 .add-row-btn { margin-top: 10px; }
 
 /* ── STATUS COLORS ── */
