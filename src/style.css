@@ -562,7 +562,7 @@ select.status-at-risk { color: var(--orange) !important; font-weight: 600; }
   font-size: 13px;
   font-family: inherit;
   outline: none;
-  min-height: 80px;
+  min-height: 160px;
   resize: vertical;
   transition: border .15s;
 }
